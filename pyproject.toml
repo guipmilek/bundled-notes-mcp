@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "bundled-notes-mcp"
-version = "0.1.0"
+version = "0.1.1"
 description = "Servidor MCP não oficial para o Bundled Notes Web."
 readme = "README.md"
 requires-python = ">=3.11"
