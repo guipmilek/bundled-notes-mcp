@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import base64
 from pathlib import Path
 from typing import Any
@@ -41,7 +42,7 @@ class FakeClient:
 
     async def upload_attachment(self, bundle_id: str, entry_id: str, file_path: str) -> dict[str, Any]:
         path = Path(file_path)
-        payload = path.read_bytes()
+        payload = await asyncio.to_thread(path.read_bytes)
         self.uploads.append((bundle_id, entry_id, path.name, payload))
         return {"attachment": {"id": "new", "text": path.name, "fileSize": len(payload)}}
 
