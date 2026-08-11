@@ -163,6 +163,22 @@ async def test_global_tag_delete_checks_all_bundles_and_unsubscribes(api: Bundle
 
 
 @pytest.mark.asyncio
+async def test_global_tag_delete_tolerates_legacy_null_array_fields(api: BundledNotesClient) -> None:
+    first = await api.create_bundle(BundleCreate(name="First"))
+    legacy = await api.create_bundle(BundleCreate(name="Legacy"))
+    tag = await api.create_tag(first["id"], TagCreate(name="Global", global_tag=True))
+    await api.db.patch(
+        f"users/u/bundles/{legacy['id']}",
+        {"kanbanColumnIds": None, "subscribedGlobalTagIds": None},
+    )
+
+    deleted = await api.delete_tag(first["id"], tag["id"], global_tag=True)
+
+    assert deleted["deleted"] is True
+    assert tag["id"] not in (await api.get_bundle(first["id"]))["subscribedGlobalTagIds"]
+
+
+@pytest.mark.asyncio
 async def test_kanban_preserves_non_column_tags(api: BundledNotesClient) -> None:
     bundle = await api.create_bundle(BundleCreate(name="Board", template="board"))
     columns = bundle["kanbanColumnIds"]

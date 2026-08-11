@@ -249,7 +249,7 @@ class BundledNotesClient:
                 continue
             entries = await self.list_entries(bundle["id"], include_archived=include_archived, limit=1000)
             for entry in entries:
-                if tag_id and tag_id not in entry.get("associatedTagIds", []):
+                if tag_id and tag_id not in (entry.get("associatedTagIds") or []):
                     continue
                 haystack = f"{entry.get('title', '')}\n{entry.get('content', '')}".casefold()
                 if needle in haystack:
@@ -264,7 +264,7 @@ class BundledNotesClient:
         values = [compact_document(row) | {"scope": "bundle"} for row in bundle_tags]
         if include_global:
             bundle = await self.get_bundle(bundle_id)
-            subscribed = set(bundle.get("subscribedGlobalTagIds", []))
+            subscribed = set(bundle.get("subscribedGlobalTagIds") or [])
             if subscribed:
                 globals_ = await self.db.list(f"users/{uid}/tags")
                 values.extend(
@@ -292,7 +292,7 @@ class BundledNotesClient:
         await self.db.create(collection, tag_id, fields)
         if spec.global_tag:
             bundle = await self.get_bundle(bundle_id)
-            ids = list(dict.fromkeys([*bundle.get("subscribedGlobalTagIds", []), tag_id]))
+            ids = list(dict.fromkeys([*(bundle.get("subscribedGlobalTagIds") or []), tag_id]))
             await self.db.patch(f"users/{uid}/bundles/{bundle_id}", {"subscribedGlobalTagIds": ids})
         return compact_document(await self._require(f"{collection}/{tag_id}")) | {
             "scope": "global" if spec.global_tag else "bundle"
@@ -324,7 +324,7 @@ class BundledNotesClient:
                 spec.mark_complete if spec.mark_complete is not None else current.get("markNoteAsComplete", False)
             )
             next_archive = spec.archive_note if spec.archive_note is not None else current.get("archiveNote", False)
-            next_swaps = spec.swap_tag_ids if spec.swap_tag_ids is not None else current.get("swapTagIds", [])
+            next_swaps = spec.swap_tag_ids if spec.swap_tag_ids is not None else (current.get("swapTagIds") or [])
             fields["todoable"] = bool(next_task or next_complete or next_archive or next_swaps)
         await self.db.patch(path, fields)
         return compact_document(await self._require(path)) | {"scope": "global" if global_tag else "bundle"}
@@ -336,9 +336,9 @@ class BundledNotesClient:
         tag = next((item for item in await self.list_tags(bundle_id) if item["id"] == tag_id), None)
         if tag is None:
             raise BundledNotesError("not_found", "The requested tag is not available in this bundle.")
-        ids = list(entry.get("associatedTagIds", []))
+        ids = list(entry.get("associatedTagIds") or [])
         if apply_actions and tag.get("swapTags"):
-            ids = [item for item in ids if item not in tag.get("swapTagIds", [])]
+            ids = [item for item in ids if item not in (tag.get("swapTagIds") or [])]
         ids = list(dict.fromkeys([*ids, tag_id]))
         fields: dict[str, Any] = {"associatedTagIds": ids}
         if apply_actions and tag.get("todoable"):
@@ -352,7 +352,7 @@ class BundledNotesClient:
 
     async def remove_tag(self, bundle_id: str, entry_id: str, tag_id: str) -> dict[str, Any]:
         entry = await self.get_entry(bundle_id, entry_id)
-        ids = [item for item in entry.get("associatedTagIds", []) if item != tag_id]
+        ids = [item for item in (entry.get("associatedTagIds") or []) if item != tag_id]
         path = f"{await self.user_path()}/bundles/{bundle_id}/entries/{entry_id}"
         await self.db.patch(path, {"associatedTagIds": ids})
         return await self.get_entry(bundle_id, entry_id)
@@ -369,10 +369,10 @@ class BundledNotesClient:
         board_bundles: list[str] = []
         for bundle in bundles:
             entries = await self.list_entries(bundle["id"], include_archived=True, limit=1000)
-            entry_ids = [entry["id"] for entry in entries if tag_id in entry.get("associatedTagIds", [])]
+            entry_ids = [entry["id"] for entry in entries if tag_id in (entry.get("associatedTagIds") or [])]
             if entry_ids:
                 references[bundle["id"]] = entry_ids
-            if tag_id in bundle.get("kanbanColumnIds", []):
+            if tag_id in (bundle.get("kanbanColumnIds") or []):
                 board_bundles.append(bundle["id"])
         if (references or board_bundles) and not allow_dangling_references:
             raise BundledNotesError(
@@ -385,7 +385,7 @@ class BundledNotesClient:
         await self.db.delete(path)
         if global_tag:
             for bundle in bundles:
-                subscribed = bundle.get("subscribedGlobalTagIds", [])
+                subscribed = bundle.get("subscribedGlobalTagIds") or []
                 if tag_id in subscribed:
                     await self.db.patch(
                         f"{await self.user_path()}/bundles/{bundle['id']}",
@@ -427,10 +427,10 @@ class BundledNotesClient:
 
     async def move_kanban(self, bundle_id: str, entry_id: str, target_column_tag_id: str | None) -> dict[str, Any]:
         bundle, entry = await asyncio.gather(self.get_bundle(bundle_id), self.get_entry(bundle_id, entry_id))
-        columns = bundle.get("kanbanColumnIds", [])
+        columns = bundle.get("kanbanColumnIds") or []
         if target_column_tag_id is not None and target_column_tag_id not in columns:
             raise BundledNotesError("unknown_column", "The target is not a configured Kanban column.")
-        tags = [tag for tag in entry.get("associatedTagIds", []) if tag not in columns]
+        tags = [tag for tag in (entry.get("associatedTagIds") or []) if tag not in columns]
         if target_column_tag_id:
             tags.append(target_column_tag_id)
         path = f"{await self.user_path()}/bundles/{bundle_id}/entries/{entry_id}"
@@ -505,7 +505,7 @@ class BundledNotesClient:
         metadata = {
             "targetBundleId": bundle_id,
             "filename": filename,
-            "associatedTagIds": ",".join(entry.get("associatedTagIds", [])),
+            "associatedTagIds": ",".join(entry.get("associatedTagIds") or []),
             "targetEntryId": entry_id,
         }
         await self.storage.upload(f"users/{uid}/{attachment_id}", str(path), metadata)
