@@ -24,5 +24,8 @@ There is no public, versioned Bundled Notes API contract. This MCP therefore:
 - verifies writes by re-reading the affected document;
 - fails with sanitized errors when Firebase rules reject an operation;
 - never retries non-idempotent creates automatically.
+- observes field names/types through a privacy-safe versioned schema contract;
+- treats new fields as additive drift and missing/type-changed required fields as breaking drift.
 
 Observed enum mappings and defaults are in `src/bundled_notes_mcp/models.py` and `BundledNotesClient._bundle_defaults`.
+The repeatable update procedure is in `docs/schema-maintenance.md`.

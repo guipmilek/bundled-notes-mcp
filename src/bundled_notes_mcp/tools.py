@@ -13,6 +13,7 @@ from .client import BundledNotesClient
 from .config import Settings
 from .errors import BundledNotesError, public_error
 from .models import BundleCreate, BundleUpdate, EntryCreate, EntryUpdate, TagCreate, TagUpdate
+from .schema import SCHEMA_CONTRACT_VERSION
 
 READ_ONLY = ToolAnnotations(readOnlyHint=True, destructiveHint=False, idempotentHint=True, openWorldHint=False)
 CREATE = ToolAnnotations(readOnlyHint=False, destructiveHint=False, idempotentHint=False, openWorldHint=False)
@@ -58,6 +59,7 @@ def register_tools(mcp: FastMCP, api: BundledNotesClient | None = None) -> None:
             current = await client().current_user()
             return {
                 "server_version": __version__,
+                "schema_contract_version": SCHEMA_CONTRACT_VERSION,
                 "configured": True,
                 "authenticated": True,
                 "uid": current.get("uid"),
@@ -66,6 +68,7 @@ def register_tools(mcp: FastMCP, api: BundledNotesClient | None = None) -> None:
         except BundledNotesError as error:
             return {
                 "server_version": __version__,
+                "schema_contract_version": SCHEMA_CONTRACT_VERSION,
                 "configured": error.code != "not_configured",
                 "authenticated": False,
                 "error": error.public(),
@@ -75,6 +78,11 @@ def register_tools(mcp: FastMCP, api: BundledNotesClient | None = None) -> None:
     async def bundled_current_user() -> dict[str, Any]:
         """Return a safe account projection; purchase and authentication tokens are always omitted."""
         return await attempt(lambda: client().current_user())
+
+    @mcp.tool(name="bundled_schema_status", title="Inspect Bundled Notes Schema", annotations=READ_ONLY)
+    async def bundled_schema_status(sample_size: int = 5) -> Any:
+        """Compare sanitized live field shapes with the supported schema contract; returns no document values."""
+        return await attempt(lambda: client().schema_status(sample_size))
 
     @mcp.tool(name="bundled_list_bundles", title="List Bundles", annotations=READ_ONLY)
     async def bundled_list_bundles(include_archived: bool = False, limit: int = 300) -> Any:

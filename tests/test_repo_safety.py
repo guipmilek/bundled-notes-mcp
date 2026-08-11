@@ -38,3 +38,9 @@ def test_open_source_community_files_exist() -> None:
         "WRITES.md",
     }
     assert all((ROOT / relative).is_file() for relative in required)
+
+
+def test_sensitive_session_exports_are_ignored() -> None:
+    ignored = (ROOT / ".gitignore").read_text(encoding="utf-8").splitlines()
+    assert "rollout-*.jsonl" in ignored
+    assert "schema-report*.json" in ignored
