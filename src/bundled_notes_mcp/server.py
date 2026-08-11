@@ -3,6 +3,7 @@ from __future__ import annotations
 from fastmcp import FastMCP
 
 from bundled_notes_mcp import __version__
+from bundled_notes_mcp.overrides import register_tool_overrides
 from bundled_notes_mcp.tools import register_tools
 
 mcp = FastMCP(
@@ -17,6 +18,7 @@ mcp = FastMCP(
     ),
 )
 register_tools(mcp)
+register_tool_overrides(mcp)
 
 
 def main() -> None:
