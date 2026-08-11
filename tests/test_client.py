@@ -280,6 +280,9 @@ async def test_template_roundtrip_and_recursive_delete(api: BundledNotesClient) 
     applied = await api.apply_template(template["id"], name="Applied")
     assert applied["name"] == "Applied"
     assert len(await api.list_entries(applied["id"])) == 1
+    applied_tags = await api.list_tags(applied["id"], include_global=False)
+    assert len(applied_tags) == 1
+    assert applied_tags[0]["bundleId"] == applied["id"]
     template_deleted = await api.delete_template(template["id"])
     assert template_deleted["entries"] == 1
     bundle_deleted = await api.delete_bundle(applied["id"])
