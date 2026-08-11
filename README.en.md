@@ -52,6 +52,23 @@ discovers the current public Firebase configuration, and writes a gitignored
 `.env` without printing the password or refresh token. If discovery stops
 working, pass the current public key with `--api-key`.
 
+### Prefect Horizon (hosted)
+
+The official deployment for this repository is available at:
+
+```text
+https://bundled-notes-mcp.fastmcp.app/mcp
+```
+
+The endpoint requires Horizon authentication and automatically promotes
+successful builds from `main`. In Horizon, use
+`src/bundled_notes_mcp/server.py:mcp` as the entrypoint, `pyproject.toml` as the
+requirements file, and configure the Firebase variables as secrets. Keep MCP
+request and response payload logging disabled because it may contain private
+notes and metadata.
+
+### Local (stdio)
+
 Example Codex configuration:
 
 ```toml

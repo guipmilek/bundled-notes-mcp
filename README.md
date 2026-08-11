@@ -58,6 +58,23 @@ informe a chave pública atual com `--api-key`.
 
 ## Executar
 
+### Prefect Horizon (hospedado)
+
+O deployment oficial deste repositório está disponível em:
+
+```text
+https://bundled-notes-mcp.fastmcp.app/mcp
+```
+
+O endpoint exige autenticação do Horizon e promove automaticamente builds bem-
+sucedidos da branch `main`. No Horizon, use o entrypoint
+`src/bundled_notes_mcp/server.py:mcp`, `pyproject.toml` como arquivo de dependências
+e configure as variáveis Firebase como secrets. Os payloads MCP de requisição e
+resposta devem permanecer desabilitados nos logs porque podem conter notas e
+metadados privados.
+
+### Local (stdio)
+
 ```powershell
 uv run bundled-notes-mcp
 ```

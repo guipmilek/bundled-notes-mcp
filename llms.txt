@@ -3,6 +3,7 @@
 Unofficial FastMCP 3 server for Bundled Notes Web using Firebase Auth refresh tokens, Firestore REST, and Firebase Storage REST.
 
 Entry point: `src/bundled_notes_mcp/server.py`
+Hosted endpoint: `https://bundled-notes-mcp.fastmcp.app/mcp` (Prefect Horizon authentication required)
 Tool catalog: `src/bundled_notes_mcp/tools.py`
 Domain operations: `src/bundled_notes_mcp/client.py`
 Auth/config: `src/bundled_notes_mcp/auth.py`, `config.py`
@@ -11,6 +12,7 @@ Enums/schemas: `src/bundled_notes_mcp/models.py`
 Storage: `src/bundled_notes_mcp/storage.py`
 
 Rules: every write requires `confirm=true`; never expose tokens; prefer archive over delete; delete bundle/template recursively; partial-patch existing docs; re-read writes; do not retry non-idempotent calls.
+Hosted data controls: keep MCP request and response payload logging disabled.
 
 Tools:
 - `bundled_status`

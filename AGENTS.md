@@ -3,8 +3,9 @@
 ## Project
 
 Unofficial Python/FastMCP server for Bundled Notes Web. Source lives under
-`src/bundled_notes_mcp/`; tests live under `tests/`. The supported runtime is local
-stdio; no hosted deployment is maintained by this repository.
+`src/bundled_notes_mcp/`; tests live under `tests/`. Supported runtimes are local
+stdio and the authenticated Prefect Horizon deployment at
+`https://bundled-notes-mcp.fastmcp.app/mcp`.
 
 ## Mandatory rules
 
@@ -19,6 +20,8 @@ stdio; no hosted deployment is maintained by this repository.
 8. Update docs and `llms.txt` when architecture, commands, tools, or security change.
 9. Use only uniquely prefixed disposable records for live integration tests and
    verify their removal afterward.
+10. Keep Horizon authentication enabled and MCP request/response payload logging
+    disabled; production data can contain private notes and attachment metadata.
 
 ## Ownership
 
