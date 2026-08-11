@@ -1,0 +1,51 @@
+name: Bundled Notes schema audit
+
+on:
+  workflow_dispatch:
+    inputs:
+      sample_size:
+        description: Sanitized documents sampled per collection
+        required: true
+        default: "5"
+  schedule:
+    - cron: "17 10 * * 1"
+
+permissions:
+  contents: read
+
+jobs:
+  read-only-schema-audit:
+    runs-on: ubuntu-latest
+    env:
+      BUNDLED_FIREBASE_API_KEY: ${{ secrets.BUNDLED_FIREBASE_API_KEY }}
+      BUNDLED_FIREBASE_REFRESH_TOKEN: ${{ secrets.BUNDLED_FIREBASE_REFRESH_TOKEN }}
+      BUNDLED_FIREBASE_UID: ${{ secrets.BUNDLED_FIREBASE_UID }}
+      SAMPLE_SIZE: ${{ inputs.sample_size || '5' }}
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: python -m pip install uv
+      - run: uv sync --locked --extra dev
+      - name: Check required repository secrets
+        id: secrets
+        shell: bash
+        run: |
+          if [[ -n "$BUNDLED_FIREBASE_API_KEY" && -n "$BUNDLED_FIREBASE_REFRESH_TOKEN" ]]; then
+            echo "configured=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "configured=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::Add BUNDLED_FIREBASE_API_KEY and BUNDLED_FIREBASE_REFRESH_TOKEN repository secrets to enable the scheduled read-only audit."
+          fi
+      - name: Compare sanitized live schema
+        if: steps.secrets.outputs.configured == 'true'
+        run: uv run python scripts/schema_audit.py --sample-size "$SAMPLE_SIZE" --output schema-report.json
+      - name: Upload sanitized report
+        if: steps.secrets.outputs.configured == 'true' && always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: bundled-notes-schema-report
+          path: schema-report.json
+          if-no-files-found: ignore
+          retention-days: 14

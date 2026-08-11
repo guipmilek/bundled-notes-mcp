@@ -19,6 +19,8 @@ Regras:
 - Toda escrita exige `confirm: true`.
 - Preserve campos desconhecidos com updates parciais.
 - Atualize `llms.txt` e a documentação ao alterar contratos ou arquitetura.
+- Para mudanças do Bundled Notes Web, siga `docs/schema-maintenance.md` e anexe
+  somente relatórios sanitizados de campos/tipos.
 - Testes ao vivo devem usar um prefixo único e remover todos os artefatos.
 
 O projeto foi desenvolvido majoritariamente com assistência de IA. Contribuições

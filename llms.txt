@@ -10,6 +10,8 @@ Auth/config: `src/bundled_notes_mcp/auth.py`, `config.py`
 Wire codec: `src/bundled_notes_mcp/firestore.py`
 Enums/schemas: `src/bundled_notes_mcp/models.py`
 Storage: `src/bundled_notes_mcp/storage.py`
+Schema compatibility: `src/bundled_notes_mcp/schema.py`, `docs/schema-maintenance.md`
+Hosted compatibility overrides: `src/bundled_notes_mcp/overrides.py`
 
 Rules: every write requires `confirm=true`; never expose tokens; prefer archive over delete; delete bundle/template recursively; partial-patch existing docs; re-read writes; verify Storage size/metadata before committing attachment references; do not retry non-idempotent calls.
 Hosted data controls: keep MCP request and response payload logging disabled.
@@ -17,6 +19,7 @@ Hosted data controls: keep MCP request and response payload logging disabled.
 Tools:
 - `bundled_status`
 - `bundled_current_user`
+- `bundled_schema_status`
 - `bundled_list_bundles`
 - `bundled_get_bundle`
 - `bundled_create_bundle`

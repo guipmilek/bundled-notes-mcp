@@ -22,6 +22,8 @@ stdio and the authenticated Prefect Horizon deployment at
    verify their removal afterward.
 10. Keep Horizon authentication enabled and MCP request/response payload logging
     disabled; production data can contain private notes and attachment metadata.
+11. Before adapting to a Bundled Notes release, run the sanitized schema audit and
+    follow `docs/schema-maintenance.md`; never commit rollout/session exports.
 
 ## Ownership
 
@@ -32,6 +34,8 @@ stdio and the authenticated Prefect Horizon deployment at
 - `firestore.py`: Firestore REST codec and transport.
 - `storage.py`: Firebase Storage upload/metadata/delete operations.
 - `models.py`: schemas, enums, IDs, and color conversion.
+- `schema.py`: privacy-safe schema observation, compatibility contract, and drift classification.
+- `overrides.py`: hosted-client compatibility overrides layered on the base tool catalog.
 - `tests/`: catalog, safety, codec, auth, and behavior checks.
 
 ## Verification

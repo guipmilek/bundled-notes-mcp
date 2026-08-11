@@ -33,6 +33,7 @@ EXPECTED_TOOLS = {
     "bundled_remove_attachment",
     "bundled_remove_tag",
     "bundled_search_entries",
+    "bundled_schema_status",
     "bundled_set_bundle_archived",
     "bundled_set_entry_state",
     "bundled_status",

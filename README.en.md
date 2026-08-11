@@ -35,6 +35,8 @@ data model used by the web app.
 - Tag deletion refuses dangling entry/Kanban references by default.
 - Uploads respect the observed 400 MiB file limit, verify Storage size/metadata,
   re-read the catalog, and compensate partial failures.
+- `bundled_schema_status` compares sanitized Firestore shapes with a versioned
+  contract without returning titles, content, filenames, IDs, or other values.
 
 Read [WRITES.md](WRITES.md) before enabling mutations.
 
@@ -86,6 +88,7 @@ without confirmation, inspect the IDs and payload, and repeat with `confirm=true
 | Group | Capabilities |
 | --- | --- |
 | Account | Authenticated status and safe user projection |
+| Compatibility | Sanitized schema audit and additive/breaking drift detection |
 | Bundles | List, get, create, update, archive, restore, and delete |
 | Entries | List, search, create, update, duplicate, move, complete, and delete |
 | Tags/tasks | Create, update, apply, remove, swap, and execute actions |
@@ -108,7 +111,8 @@ uv build
 ```
 
 See [reverse engineering](docs/reverse-engineering.md),
-[data model](docs/data-model.md), and [testing](docs/testing.md).
+[data model](docs/data-model.md), [schema maintenance](docs/schema-maintenance.md),
+and [testing](docs/testing.md).
 
 ## Known limits
 

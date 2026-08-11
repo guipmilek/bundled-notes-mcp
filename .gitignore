@@ -3,7 +3,10 @@
 __pycache__/
 *.py[cod]
 .pytest_cache/
+pytest-of-root/
 .ruff_cache/
 dist/
 build/
 *.egg-info/
+rollout-*.jsonl
+schema-report*.json

@@ -95,6 +95,21 @@ async def test_current_user_redacts_purchase_token(api: BundledNotesClient) -> N
 
 
 @pytest.mark.asyncio
+async def test_schema_status_returns_only_shapes(api: BundledNotesClient) -> None:
+    bundle = await api.create_bundle(BundleCreate(name="Private bundle"))
+    await api.create_entry(bundle["id"], EntryCreate(title="Private title", content="private body"))
+
+    report = await api.schema_status()
+
+    assert report["collections"]["bundle"]["sample_count"] == 1
+    assert report["collections"]["entry"]["sample_count"] == 1
+    serialized = str(report)
+    assert "Private bundle" not in serialized
+    assert "Private title" not in serialized
+    assert "private body" not in serialized
+
+
+@pytest.mark.asyncio
 @pytest.mark.parametrize("template", ["notes", "list", "board"])
 async def test_create_bundle_templates(api: BundledNotesClient, template: str) -> None:
     bundle = await api.create_bundle(BundleCreate(name=f"{template} bundle", template=template))  # type: ignore[arg-type]

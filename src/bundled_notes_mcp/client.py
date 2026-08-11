@@ -24,6 +24,7 @@ from .models import (
     new_id,
     new_numeric_id,
 )
+from .schema import build_schema_report
 from .storage import FirebaseStorage
 
 
@@ -63,6 +64,50 @@ class BundledNotesClient:
             result["settings"] = {key: value for key, value in result["settings"].items() if key in safe_settings}
         result["uid"] = await self.uid()
         return result
+
+    async def schema_status(self, sample_size: int = 5) -> dict[str, Any]:
+        """Observe the authenticated schema without returning document values."""
+        if sample_size < 1 or sample_size > 25:
+            raise BundledNotesError("invalid_sample_size", "sample_size must be between 1 and 25.")
+
+        base = await self.user_path()
+        user = await self.db.get(base)
+        bundles = await self.db.list(f"{base}/bundles", page_size=sample_size)
+        templates = await self.db.list(f"{base}/templates", page_size=sample_size)
+        samples: dict[str, list[dict[str, Any]]] = {
+            "user": [_schema_document(user)] if user else [],
+            "bundle": [_schema_document(item) for item in bundles],
+            "entry": [],
+            "tag": [_schema_document(item) for item in await self.db.list(f"{base}/tags", page_size=sample_size)],
+            "template": [_schema_document(item) for item in templates],
+            "attachment": [
+                _schema_document(item) for item in await self.db.list(f"{base}/attachments", page_size=sample_size)
+            ],
+        }
+
+        for bundle in bundles:
+            bundle_id = _document_id(bundle)
+            if not bundle_id:
+                continue
+            entries, tags = await asyncio.gather(
+                self.db.list(f"{base}/bundles/{bundle_id}/entries", page_size=sample_size),
+                self.db.list(f"{base}/bundles/{bundle_id}/tags", page_size=sample_size),
+            )
+            samples["entry"].extend(_schema_document(item) for item in entries)
+            samples["tag"].extend(_schema_document(item) for item in tags)
+
+        for template in templates:
+            template_id = _document_id(template)
+            if not template_id:
+                continue
+            entries, tags = await asyncio.gather(
+                self.db.list(f"{base}/templates/{template_id}/entries", page_size=sample_size),
+                self.db.list(f"{base}/templates/{template_id}/tags", page_size=sample_size),
+            )
+            samples["entry"].extend(_schema_document(item) for item in entries)
+            samples["tag"].extend(_schema_document(item) for item in tags)
+
+        return build_schema_report(samples)
 
     async def list_bundles(self, *, include_archived: bool = False, limit: int = 300) -> list[dict[str, Any]]:
         rows = await self.db.list(f"{await self.user_path()}/bundles", page_size=limit)
@@ -634,6 +679,22 @@ class BundledNotesClient:
             "orderByRemindersFirst": True,
             "config": {"markdownFlavor": "legacy", "lockEditorByDefault": False, "showEllipsisIfNoteIsHidden": False},
         }
+
+
+def _document_id(document: dict[str, Any]) -> str | None:
+    value = document.get("id")
+    if value:
+        return str(value)
+    path = document.get("_path")
+    return str(path).rsplit("/", 1)[-1] if path else None
+
+
+def _schema_document(document: dict[str, Any]) -> dict[str, Any]:
+    result = {key: value for key, value in document.items() if not key.startswith("_")}
+    document_id = _document_id(document)
+    if document_id:
+        result.setdefault("id", document_id)
+    return result
 
 
 def _file_info(file_path: str) -> tuple[Path, str, int]:

@@ -35,6 +35,8 @@ pelo aplicativo web.
 - Exclusões de tag bloqueiam referências pendentes por padrão.
 - Uploads respeitam o limite observado de 400 MiB, validam tamanho/metadados no
   Storage, relêem o catálogo e compensam falhas parciais.
+- `bundled_schema_status` compara formas sanitizadas do Firestore com um contrato
+  versionado sem retornar títulos, conteúdo, nomes de arquivo, IDs ou outros valores.
 
 Consulte [WRITES.md](WRITES.md) antes de habilitar mutações.
 
@@ -102,6 +104,7 @@ vez sem confirmação, revise IDs e payload, depois repita com `confirm=true`.
 | Grupo | Capacidades |
 | --- | --- |
 | Conta | Status autenticado e projeção segura do usuário |
+| Compatibilidade | Auditoria sanitizada de schema e detecção de drift aditivo/quebrável |
 | Bundles | Listar, consultar, criar, editar, arquivar, restaurar e excluir |
 | Notas | Listar, buscar, criar, editar, duplicar, mover, concluir e excluir |
 | Tags e tarefas | Criar, editar, aplicar, remover, trocar e executar ações |
@@ -122,7 +125,8 @@ uv build
 ```
 
 Consulte [engenharia reversa](docs/reverse-engineering.md),
-[modelo de dados](docs/data-model.md) e [testes](docs/testing.md). `llms.txt` contém
+[modelo de dados](docs/data-model.md), [manutenção de schema](docs/schema-maintenance.md)
+e [testes](docs/testing.md). `llms.txt` contém
 o mapa compacto para agentes.
 
 ## Limites conhecidos
