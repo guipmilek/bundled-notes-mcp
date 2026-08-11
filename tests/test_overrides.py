@@ -132,9 +132,7 @@ async def test_upload_requires_exactly_one_source(mcp: FastMCP) -> None:
 async def test_account_attachment_delete_refuses_dangling_reference(mcp: FastMCP, fake: FakeClient) -> None:
     async with Client(mcp) as session:
         blocked = (
-            await session.call_tool(
-                "bundled_delete_account_attachment", {"attachment_id": "a1", "confirm": True}
-            )
+            await session.call_tool("bundled_delete_account_attachment", {"attachment_id": "a1", "confirm": True})
         ).data
         allowed = (
             await session.call_tool(
