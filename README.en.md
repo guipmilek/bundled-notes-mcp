@@ -33,7 +33,8 @@ data model used by the web app.
 - Entry moves create and verify the destination before deleting the source, with
   compensating cleanup if source deletion fails.
 - Tag deletion refuses dangling entry/Kanban references by default.
-- Uploads respect the observed 400 MiB file limit and compensate partial failures.
+- Uploads respect the observed 400 MiB file limit, verify Storage size/metadata,
+  re-read the catalog, and compensate partial failures.
 
 Read [WRITES.md](WRITES.md) before enabling mutations.
 
