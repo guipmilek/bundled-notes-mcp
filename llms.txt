@@ -1,0 +1,50 @@
+# bundled-notes-mcp
+
+Unofficial FastMCP 3 server for Bundled Notes Web using Firebase Auth refresh tokens, Firestore REST, and Firebase Storage REST.
+
+Entry point: `src/bundled_notes_mcp/server.py`
+Tool catalog: `src/bundled_notes_mcp/tools.py`
+Domain operations: `src/bundled_notes_mcp/client.py`
+Auth/config: `src/bundled_notes_mcp/auth.py`, `config.py`
+Wire codec: `src/bundled_notes_mcp/firestore.py`
+Enums/schemas: `src/bundled_notes_mcp/models.py`
+Storage: `src/bundled_notes_mcp/storage.py`
+
+Rules: every write requires `confirm=true`; never expose tokens; prefer archive over delete; delete bundle/template recursively; partial-patch existing docs; re-read writes; do not retry non-idempotent calls.
+
+Tools:
+- `bundled_status`
+- `bundled_current_user`
+- `bundled_list_bundles`
+- `bundled_get_bundle`
+- `bundled_create_bundle`
+- `bundled_update_bundle`
+- `bundled_set_bundle_archived`
+- `bundled_delete_bundle`
+- `bundled_list_entries`
+- `bundled_get_entry`
+- `bundled_search_entries`
+- `bundled_create_entry`
+- `bundled_update_entry`
+- `bundled_set_entry_state`
+- `bundled_delete_entry`
+- `bundled_duplicate_entry`
+- `bundled_move_entry`
+- `bundled_list_tags`
+- `bundled_create_tag`
+- `bundled_update_tag`
+- `bundled_apply_tag`
+- `bundled_remove_tag`
+- `bundled_delete_tag`
+- `bundled_configure_kanban`
+- `bundled_move_kanban_entry`
+- `bundled_list_templates`
+- `bundled_create_template`
+- `bundled_apply_template`
+- `bundled_delete_template`
+- `bundled_list_attachments`
+- `bundled_upload_attachment`
+- `bundled_remove_attachment`
+- `bundled_delete_account_attachment`
+
+Verification: `uv run ruff check .`, `uv run pytest`, `uv build`.
