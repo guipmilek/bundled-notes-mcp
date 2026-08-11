@@ -19,8 +19,9 @@ Firebase quando a confirmação não é enviada.
   origem falhar, a cópia é removida como compensação.
 - Excluir bundle ou template remove recursivamente suas subcoleções conhecidas.
 - Excluir tag bloqueia referências de notas/Kanban, salvo override explícito.
-- Upload cria objeto, catálogo e referência da nota; falhas intermediárias tentam
-  remover os registros já criados.
+- Upload cria objeto, valida tamanho e metadados no Storage, cria/relê o catálogo
+  e adiciona a referência da nota; falhas intermediárias tentam remover os
+  registros já criados.
 - Desanexar mantém o arquivo no catálogo. Excluir o arquivo da conta é permanente.
 
 O Firestore não oferece uma transação única para todos os fluxos multietapa usados

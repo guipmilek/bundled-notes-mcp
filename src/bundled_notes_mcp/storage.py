@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 import json
 import mimetypes
+import secrets
 from pathlib import Path
 from typing import Any
 from urllib.parse import quote
@@ -28,7 +29,7 @@ class FirebaseStorage:
         if size > MAX_FILE_BYTES:
             raise BundledNotesError("file_too_large", "Bundled Notes files are limited to 400 MiB.")
         content_type = mimetypes.guess_type(path.name)[0] or "application/octet-stream"
-        boundary = "bundled-notes-mcp-boundary"
+        boundary = f"bundled-notes-mcp-{secrets.token_hex(16)}"
         object_metadata = {"name": object_name, "contentType": content_type, "metadata": metadata}
         prefix = (
             f"--{boundary}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n"
@@ -38,9 +39,10 @@ class FirebaseStorage:
         body = prefix + payload + f"\r\n--{boundary}--\r\n".encode()
         headers = await self.auth.headers()
         headers["Content-Type"] = f"multipart/related; boundary={boundary}"
+        headers["X-Goog-Upload-Protocol"] = "multipart"
         response = await self.http.post(
             f"https://firebasestorage.googleapis.com/v0/b/{self.bucket}/o",
-            params={"uploadType": "multipart", "name": object_name},
+            params={"name": object_name},
             content=body,
             headers=headers,
         )

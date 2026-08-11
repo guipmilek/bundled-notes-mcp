@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import asyncio
 import copy
+from pathlib import Path
 from types import SimpleNamespace
 from typing import Any
 
@@ -61,6 +63,22 @@ class MemoryDB:
         self.docs.pop(path, None)
 
 
+class MemoryStorage:
+    def __init__(self, *, size_offset: int = 0) -> None:
+        self.size_offset = size_offset
+        self.uploaded: dict[str, dict[str, Any]] = {}
+        self.deleted: list[str] = []
+
+    async def upload(self, object_name: str, file_path: str, metadata: dict[str, str]) -> dict[str, Any]:
+        size = (await asyncio.to_thread(Path(file_path).stat)).st_size
+        self.uploaded[object_name] = {"file_path": file_path, "metadata": copy.deepcopy(metadata)}
+        return {"name": object_name, "size": str(size + self.size_offset), "metadata": copy.deepcopy(metadata)}
+
+    async def delete(self, object_name: str) -> None:
+        self.deleted.append(object_name)
+        self.uploaded.pop(object_name, None)
+
+
 @pytest.fixture
 def api() -> BundledNotesClient:
     client = BundledNotesClient(FakeAuth())  # type: ignore[arg-type]
@@ -115,6 +133,54 @@ async def test_duplicate_and_move_semantics(api: BundledNotesClient) -> None:
     assert moved["parentBundleId"] == target["id"]
     with pytest.raises(BundledNotesError):
         await api.get_entry(source["id"], entry["id"])
+
+
+@pytest.mark.asyncio
+async def test_attachment_upload_verifies_and_persists_exact_catalog_metadata(
+    api: BundledNotesClient, tmp_path: Path
+) -> None:
+    storage = MemoryStorage()
+    api.storage = storage  # type: ignore[assignment]
+    bundle = await api.create_bundle(BundleCreate(name="Files"))
+    entry = await api.create_entry(bundle["id"], EntryCreate(title="Attachment"))
+    fixture = tmp_path / "named fixture.txt"
+    fixture.write_bytes(b"six!!!")
+
+    uploaded = await api.upload_attachment(bundle["id"], entry["id"], str(fixture))
+    catalog = await api.list_attachments()
+    reread = await api.get_entry(bundle["id"], entry["id"])
+
+    expected = {
+        "id": uploaded["attachment"]["id"],
+        "uid": uploaded["attachment"]["id"],
+        "storageId": uploaded["attachment"]["id"],
+        "type": 6,
+        "fileSize": 6,
+        "text": "named fixture.txt",
+    }
+    assert uploaded["attachment"] == expected
+    assert catalog == [expected]
+    assert reread["attachments"] == {expected["id"]: {key: value for key, value in expected.items() if key != "id"}}
+
+
+@pytest.mark.asyncio
+async def test_attachment_upload_compensates_when_storage_metadata_does_not_match(
+    api: BundledNotesClient, tmp_path: Path
+) -> None:
+    storage = MemoryStorage(size_offset=236)
+    api.storage = storage  # type: ignore[assignment]
+    bundle = await api.create_bundle(BundleCreate(name="Files"))
+    entry = await api.create_entry(bundle["id"], EntryCreate(title="Attachment"))
+    fixture = tmp_path / "fixture.txt"
+    fixture.write_bytes(b"hello\n")
+
+    with pytest.raises(BundledNotesError) as raised:
+        await api.upload_attachment(bundle["id"], entry["id"], str(fixture))
+
+    assert raised.value.code == "attachment_verification_failed"
+    assert await api.list_attachments() == []
+    assert (await api.get_entry(bundle["id"], entry["id"]))["attachments"] == {}
+    assert len(storage.deleted) == 1
 
 
 @pytest.mark.asyncio
