@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import base64
 import binascii
 import tempfile
@@ -125,7 +126,7 @@ def register_tool_overrides(mcp: FastMCP, api: BundledNotesClient | None = None)
             safe_name = _safe_filename(filename or "")
             with tempfile.TemporaryDirectory(prefix="bundled-notes-mcp-upload-") as directory:
                 path = Path(directory) / safe_name
-                path.write_bytes(payload)
+                await asyncio.to_thread(path.write_bytes, payload)
                 return await client().upload_attachment(bundle_id, entry_id, str(path))
 
         return await attempt(upload_inline)
