@@ -204,11 +204,22 @@ async def run(run_id: str) -> dict[str, Any]:
 
             board = await call(
                 "bundled_create_bundle",
-                {"spec": {"name": f"{prefix} Board", "template": "board"}, "confirm": True},
+                {"spec": {"name": f"{prefix} Board", "template": "list"}, "confirm": True},
             )
             bundle_ids.append(board["id"])
-            columns = board["kanbanColumnIds"]
-            assert len(columns) == 3
+            column_tags = []
+            for name, color in (("To Do", "#4a4ddf"), ("Doing", "#e9860c"), ("Done", "#0ce986")):
+                column_tags.append(
+                    await call(
+                        "bundled_create_tag",
+                        {
+                            "bundle_id": board["id"],
+                            "spec": {"name": f"{prefix} {name}", "color": color},
+                            "confirm": True,
+                        },
+                    )
+                )
+            columns = [tag["id"] for tag in column_tags]
             await call(
                 "bundled_configure_kanban",
                 {"bundle_id": board["id"], "column_tag_ids": columns, "backlog_name": "Inbox", "confirm": True},
@@ -261,6 +272,9 @@ async def run(run_id: str) -> dict[str, Any]:
             )
             bundle_ids.append(applied["id"])
             assert applied["name"] == f"{prefix} Applied"
+            applied_tags = await call("bundled_list_tags", {"bundle_id": applied["id"], "include_global": False})
+            assert applied_tags["count"] == 3
+            assert all(tag["bundleId"] == applied["id"] for tag in applied_tags["tags"])
             checks.append("template_create_apply")
 
             payload = b"0123456789012345678901234567890123456789012345678"

@@ -522,6 +522,8 @@ class BundledNotesClient:
                 copied = {key: value for key, value in row.items() if not key.startswith("_")}
                 if subcollection == "entries":
                     copied["parentBundleId"] = bundle_id
+                else:
+                    copied["bundleId"] = bundle_id
                 await self.db.create(f"users/{uid}/bundles/{bundle_id}/{subcollection}", row["id"], copied)
         if default_bundle:
             await self.db.patch(f"users/{uid}", {"defaultBundle": bundle_id})

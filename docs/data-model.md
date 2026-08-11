@@ -32,3 +32,7 @@ Entry sort: alphabetical `0`, reverse alphabetical `1`, updated oldest `2`, upda
 Web layouts: compact `0`, grid `1`, standard/card `2`. Markdown flavors: `legacy`, `gfm`. Entry types: solo `-17`, mixed `-12`, solo image `-23`.
 
 Attachment types: rich link `1`, file from device/account `5/6`, image from account/device `17/18`, image URL `32`, arbitrary text `99`, reminder text `102`.
+
+Template tag snapshots can retain the source bundle ID while stored below
+`templates/{templateId}/tags`. When a template is applied, copied local tags are
+rebound to the newly created bundle through `bundleId`.
