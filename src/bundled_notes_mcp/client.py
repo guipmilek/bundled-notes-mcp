@@ -502,30 +502,58 @@ class BundledNotesClient:
         uid, attachment_id = await self.uid(), new_id()
         entry = await self.get_entry(bundle_id, entry_id)
         path, filename, file_size = await asyncio.to_thread(_file_info, file_path)
+        object_name = f"users/{uid}/{attachment_id}"
+        catalog_path = f"users/{uid}/attachments/{attachment_id}"
+        entry_path = f"users/{uid}/bundles/{bundle_id}/entries/{entry_id}"
         metadata = {
             "targetBundleId": bundle_id,
             "filename": filename,
             "associatedTagIds": ",".join(entry.get("associatedTagIds") or []),
             "targetEntryId": entry_id,
         }
-        await self.storage.upload(f"users/{uid}/{attachment_id}", str(path), metadata)
         record = {
+            "id": attachment_id,
             "type": ATTACHMENT_TYPES["file_account"],
             "uid": attachment_id,
             "storageId": attachment_id,
             "fileSize": file_size,
             "text": filename,
         }
+        original_attachments = dict(entry.get("attachments") or {})
+        next_attachments = dict(original_attachments)
+        next_attachments[attachment_id] = {key: value for key, value in record.items() if key != "id"}
+        uploaded = False
+        entry_updated = False
         try:
-            await self.db.create(f"users/{uid}/attachments", attachment_id, record | {"id": attachment_id})
-            attachments = dict(entry.get("attachments") or {})
-            attachments[attachment_id] = record
-            await self.db.patch(f"users/{uid}/bundles/{bundle_id}/entries/{entry_id}", {"attachments": attachments})
+            uploaded_metadata = await self.storage.upload(object_name, str(path), metadata)
+            uploaded = True
+            _verify_storage_attachment(uploaded_metadata, object_name, file_size, metadata)
+            try:
+                await self.db.create(f"users/{uid}/attachments", attachment_id, record)
+            except BundledNotesError as error:
+                if error.code != "conflict":
+                    raise
+                await self.db.patch(catalog_path, record)
+            await self.db.patch(entry_path, {"attachments": next_attachments})
+            entry_updated = True
+
+            catalog = compact_document(await self._require(catalog_path))
+            if not _attachment_record_matches(catalog, record):
+                await self.db.patch(catalog_path, record)
+                catalog = compact_document(await self._require(catalog_path))
+            if not _attachment_record_matches(catalog, record):
+                raise BundledNotesError(
+                    "attachment_verification_failed",
+                    "The uploaded file catalog metadata could not be verified.",
+                )
         except Exception:
-            await self.db.delete(f"users/{uid}/attachments/{attachment_id}")
-            await self.storage.delete(f"users/{uid}/{attachment_id}")
+            if entry_updated:
+                await self.db.patch(entry_path, {"attachments": original_attachments})
+            await self.db.delete(catalog_path)
+            if uploaded:
+                await self.storage.delete(object_name)
             raise
-        return {"attachment": record | {"id": attachment_id}, "entry": await self.get_entry(bundle_id, entry_id)}
+        return {"attachment": catalog, "entry": await self.get_entry(bundle_id, entry_id)}
 
     async def remove_attachment(self, bundle_id: str, entry_id: str, attachment_id: str) -> dict[str, Any]:
         entry = await self.get_entry(bundle_id, entry_id)
@@ -613,3 +641,29 @@ def _file_info(file_path: str) -> tuple[Path, str, int]:
     if not path.is_file():
         raise BundledNotesError("file_not_found", "The local attachment file does not exist.")
     return path, path.name, path.stat().st_size
+
+
+def _verify_storage_attachment(
+    uploaded: dict[str, Any], object_name: str, file_size: int, custom_metadata: dict[str, str]
+) -> None:
+    try:
+        uploaded_size = int(uploaded.get("size"))
+    except (TypeError, ValueError) as error:
+        raise BundledNotesError(
+            "attachment_verification_failed", "The uploaded file size could not be verified."
+        ) from error
+    if uploaded.get("name") != object_name or uploaded_size != file_size:
+        raise BundledNotesError(
+            "attachment_verification_failed", "The uploaded file metadata did not match the requested file."
+        )
+    stored_metadata = uploaded.get("metadata")
+    if not isinstance(stored_metadata, dict) or any(
+        stored_metadata.get(key) != value for key, value in custom_metadata.items()
+    ):
+        raise BundledNotesError(
+            "attachment_verification_failed", "The uploaded file metadata did not match the requested file."
+        )
+
+
+def _attachment_record_matches(actual: dict[str, Any], expected: dict[str, Any]) -> bool:
+    return all(actual.get(key) == value for key, value in expected.items())
