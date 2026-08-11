@@ -33,7 +33,8 @@ pelo aplicativo web.
 - Movimentações criam e verificam o destino antes de remover a origem, com rollback
   compensatório da cópia quando necessário.
 - Exclusões de tag bloqueiam referências pendentes por padrão.
-- Uploads respeitam o limite observado de 400 MiB e compensam falhas parciais.
+- Uploads respeitam o limite observado de 400 MiB, validam tamanho/metadados no
+  Storage, relêem o catálogo e compensam falhas parciais.
 
 Consulte [WRITES.md](WRITES.md) antes de habilitar mutações.
 
