@@ -3,6 +3,10 @@
   <a href="./README.md"><img src="https://img.shields.io/badge/lang-pt--br-gray?style=flat-square&amp;labelColor=202024" alt="Português" /></a>
 </p>
 
+<p align="center">
+  <img src="./assets/bundled-notes-mcp.png" alt="Bundled Notes" width="120" />
+</p>
+
 <h1 id="top" align="center">Bundled Notes MCP</h1>
 
 <p align="center">
@@ -84,6 +88,23 @@ args = ["--directory", "C:/path/to/bundled-notes-mcp", "run", "bundled-notes-mcp
 
 Start with `bundled_status` and `bundled_list_bundles`. For a write, call once
 without confirmation, inspect the IDs and payload, and repeat with `confirm=true`.
+
+## Connect to ChatGPT
+
+Use these values when adding the MCP to ChatGPT:
+
+| Field | Value |
+| --- | --- |
+| Name | `Bundled Notes` |
+| Description | `Read and manage bundles, notes, tags, Kanban boards, templates, and files in your Bundled Notes account, with confirmation required before changes.` |
+| URL | `https://bundled-notes-mcp.fastmcp.app/mcp` |
+| Authentication | OAuth |
+| Image | [`assets/bundled-notes-mcp.png`](assets/bundled-notes-mcp.png) — square PNG, 512 × 512, under 100 KB |
+
+In ChatGPT, enable developer mode under **Settings → Security and login**, open
+**Plugins**, select **+**, enter the values above, and complete authentication.
+See the [ChatGPT connection guide](docs/chatgpt-app-setup.md) for validation and
+catalog-refresh steps.
 
 ## Tool groups
 
