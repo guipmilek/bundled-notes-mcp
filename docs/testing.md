@@ -2,6 +2,10 @@
 
 Unit tests cover Firestore value codecs, enum/color and schema validation, confirmation gates, error sanitization, token refresh behavior, the Firebase multipart upload wire format, exact attachment metadata, compensating cleanup, and client write semantics with an in-memory Firestore double.
 
+They also cover bounded authenticated downloads, callable-function wire format,
+JSON exports, global-tag subscriptions, manual ordering, and read-only reminder
+projection.
+
 `scripts/schema_audit.py` is read-only and emits only field names and value types.
 It distinguishes compatible, additive, and breaking drift and exits non-zero for
 breaking changes. The scheduled GitHub workflow uses the same probe when its

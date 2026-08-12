@@ -10,6 +10,11 @@ Bundle templates are Notes (grid plus a default General tag), List (standard lay
 
 Entry editing supports Markdown title/content, tags, pin, archive/restore, completion, attachments, delete, duplicate, and cross-bundle move/copy. A move creates a new destination document ID, then removes the source. Kanban movement replaces the old column tag with the destination column tag while preserving unrelated tags.
 
+The web client invokes `buildRichPreviewsForEntry` with `uid`, `bundleId`,
+`entryId`, and optional `refreshAttachmentId`. It orders bundles/entries with
+`indexPosition`, tags with `tagPriorityOrder`, and stores visible account-global
+tags in each bundle's `subscribedGlobalTagIds`.
+
 Tags can be bundle-local or global/subscribed. A task tag can mark complete, archive, and swap tags. The current client stores task action mode `4` with explicit booleans for those actions.
 
 Custom templates copy a bundle's configuration and tags, optionally entries, then instantiate a new bundle. Files & Photos stores an account catalog document plus an object under the user's Firebase Storage prefix; an entry holds a metadata map keyed by the attachment ID.

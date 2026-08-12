@@ -12,7 +12,7 @@ from .auth import FirebaseAuth
 from .client import BundledNotesClient
 from .config import Settings
 from .errors import BundledNotesError, public_error
-from .models import BundleCreate, BundleUpdate, EntryCreate, EntryUpdate, TagCreate, TagUpdate
+from .models import MAX_MCP_DOWNLOAD_BYTES, BundleCreate, BundleUpdate, EntryCreate, EntryUpdate, TagCreate, TagUpdate
 from .schema import SCHEMA_CONTRACT_VERSION
 
 READ_ONLY = ToolAnnotations(readOnlyHint=True, destructiveHint=False, idempotentHint=True, openWorldHint=False)
@@ -84,12 +84,39 @@ def register_tools(mcp: FastMCP, api: BundledNotesClient | None = None) -> None:
         """Compare sanitized live field shapes with the supported schema contract; returns no document values."""
         return await attempt(lambda: client().schema_status(sample_size))
 
+    @mcp.tool(name="bundled_export_data", title="Export Bundled Notes Data", annotations=READ_ONLY)
+    async def bundled_export_data(
+        bundle_id: str | None = None,
+        include_archived: bool = True,
+        include_attachment_catalog: bool = True,
+    ) -> Any:
+        """Export an account or one bundle as structured JSON; file bytes and download tokens are omitted."""
+        return await attempt(
+            lambda: client().export_data(
+                bundle_id=bundle_id,
+                include_archived=include_archived,
+                include_attachment_catalog=include_attachment_catalog,
+            )
+        )
+
+    @mcp.tool(name="bundled_list_reminders", title="List Entry Reminders", annotations=READ_ONLY)
+    async def bundled_list_reminders(limit: int = 300) -> Any:
+        """List reminder metadata currently attached to entries; reminder scheduling writes remain unsupported."""
+        return await attempt(lambda: collection("reminders", client().list_reminders(limit)))
+
     @mcp.tool(name="bundled_list_bundles", title="List Bundles", annotations=READ_ONLY)
     async def bundled_list_bundles(include_archived: bool = False, limit: int = 300) -> Any:
         """List bundles, optionally including archived bundles."""
         return await attempt(
             lambda: collection("bundles", client().list_bundles(include_archived=include_archived, limit=limit))
         )
+
+    @mcp.tool(name="bundled_reorder_bundles", title="Reorder Bundles", annotations=UPDATE)
+    async def bundled_reorder_bundles(bundle_ids: list[str], confirm: bool = False) -> Any:
+        """Assign manual index positions to the supplied bundles in order."""
+        if not confirm:
+            return confirmation("reorder_bundles", {"bundle_ids": bundle_ids})
+        return await attempt(lambda: collection("bundles", client().reorder_bundles(bundle_ids)))
 
     @mcp.tool(name="bundled_get_bundle", title="Get Bundle", annotations=READ_ONLY)
     async def bundled_get_bundle(bundle_id: str) -> Any:
@@ -133,6 +160,13 @@ def register_tools(mcp: FastMCP, api: BundledNotesClient | None = None) -> None:
             )
         )
 
+    @mcp.tool(name="bundled_reorder_entries", title="Reorder Bundle Entries", annotations=UPDATE)
+    async def bundled_reorder_entries(bundle_id: str, entry_ids: list[str], confirm: bool = False) -> Any:
+        """Set manual entry positions and switch the bundle to managed ordering."""
+        if not confirm:
+            return confirmation("reorder_entries", {"bundle_id": bundle_id, "entry_ids": entry_ids})
+        return await attempt(lambda: collection("entries", client().reorder_entries(bundle_id, entry_ids)))
+
     @mcp.tool(name="bundled_get_entry", title="Get Entry", annotations=READ_ONLY)
     async def bundled_get_entry(bundle_id: str, entry_id: str) -> Any:
         """Get an entry with Markdown content, tag IDs, state, and attachment metadata."""
@@ -171,6 +205,16 @@ def register_tools(mcp: FastMCP, api: BundledNotesClient | None = None) -> None:
                 "update_entry", {"bundle_id": bundle_id, "entry_id": entry_id, **spec.model_dump(exclude_none=True)}
             )
         return await attempt(lambda: client().update_entry(bundle_id, entry_id, spec))
+
+    @mcp.tool(name="bundled_refresh_link_previews", title="Generate or Refresh Rich Links", annotations=UPDATE)
+    async def bundled_refresh_link_previews(
+        bundle_id: str, entry_id: str, attachment_id: str | None = None, confirm: bool = False
+    ) -> Any:
+        """Run Bundled Notes' native rich-link callable function and re-read the entry."""
+        summary = {"bundle_id": bundle_id, "entry_id": entry_id, "attachment_id": attachment_id}
+        if not confirm:
+            return confirmation("refresh_link_previews", summary)
+        return await attempt(lambda: client().refresh_link_previews(bundle_id, entry_id, attachment_id))
 
     @mcp.tool(name="bundled_set_entry_state", title="Set Entry State", annotations=UPDATE)
     async def bundled_set_entry_state(
@@ -240,6 +284,28 @@ def register_tools(mcp: FastMCP, api: BundledNotesClient | None = None) -> None:
     async def bundled_list_tags(bundle_id: str, include_global: bool = True) -> Any:
         """List bundle-local tags and subscribed global tags."""
         return await attempt(lambda: collection("tags", client().list_tags(bundle_id, include_global=include_global)))
+
+    @mcp.tool(name="bundled_list_global_tags", title="List Account Global Tags", annotations=READ_ONLY)
+    async def bundled_list_global_tags(limit: int = 300) -> Any:
+        """List every account-level global tag, including tags not subscribed by a particular bundle."""
+        return await attempt(lambda: collection("tags", client().list_global_tags(limit)))
+
+    @mcp.tool(name="bundled_set_global_tag_subscription", title="Show or Hide Global Tag", annotations=UPDATE)
+    async def bundled_set_global_tag_subscription(
+        bundle_id: str, tag_id: str, subscribed: bool, confirm: bool = False
+    ) -> Any:
+        """Subscribe or unsubscribe an existing account global tag for one bundle."""
+        summary = {"bundle_id": bundle_id, "tag_id": tag_id, "subscribed": subscribed}
+        if not confirm:
+            return confirmation("set_global_tag_subscription", summary)
+        return await attempt(lambda: client().set_global_tag_subscription(bundle_id, tag_id, subscribed))
+
+    @mcp.tool(name="bundled_reorder_tags", title="Reorder Tag Priority", annotations=UPDATE)
+    async def bundled_reorder_tags(bundle_id: str, tag_ids: list[str], confirm: bool = False) -> Any:
+        """Set a bundle's explicit tag priority order using local or subscribed global tag IDs."""
+        if not confirm:
+            return confirmation("reorder_tags", {"bundle_id": bundle_id, "tag_ids": tag_ids})
+        return await attempt(lambda: client().reorder_tags(bundle_id, tag_ids))
 
     @mcp.tool(name="bundled_create_tag", title="Create Tag or Task", annotations=CREATE)
     async def bundled_create_tag(bundle_id: str, spec: TagCreate, confirm: bool = False) -> Any:
@@ -389,6 +455,11 @@ def register_tools(mcp: FastMCP, api: BundledNotesClient | None = None) -> None:
     async def bundled_list_attachments(limit: int = 300) -> Any:
         """List account-level Files & Photos metadata without download tokens."""
         return await attempt(lambda: collection("attachments", client().list_attachments(limit)))
+
+    @mcp.tool(name="bundled_download_attachment", title="Download Account File", annotations=READ_ONLY)
+    async def bundled_download_attachment(attachment_id: str, max_bytes: int = MAX_MCP_DOWNLOAD_BYTES) -> Any:
+        """Return an authenticated account file as Base64, capped at 10 MiB; no download token is exposed."""
+        return await attempt(lambda: client().download_attachment(attachment_id, max_bytes))
 
     @mcp.tool(name="bundled_upload_attachment", title="Upload and Attach File", annotations=CREATE)
     async def bundled_upload_attachment(bundle_id: str, entry_id: str, file_path: str, confirm: bool = False) -> Any:

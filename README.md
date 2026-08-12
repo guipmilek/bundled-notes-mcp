@@ -30,6 +30,8 @@ pelo aplicativo web.
   e removem recursivamente as subcoleções Firestore conhecidas.
 - Atualizações usam update masks e preservam campos desconhecidos.
 - Tokens de autenticação, compra e download nunca são retornados pelas ferramentas.
+- Downloads autenticados retornam Base64 somente até 10 MiB e nunca expõem URLs
+  assinadas ou tokens do Firebase Storage.
 - Movimentações criam e verificam o destino antes de remover a origem, com rollback
   compensatório da cópia quando necessário.
 - Exclusões de tag bloqueiam referências pendentes por padrão.
@@ -105,12 +107,15 @@ vez sem confirmação, revise IDs e payload, depois repita com `confirm=true`.
 | --- | --- |
 | Conta | Status autenticado e projeção segura do usuário |
 | Compatibilidade | Auditoria sanitizada de schema e detecção de drift aditivo/quebrável |
-| Bundles | Listar, consultar, criar, editar, arquivar, restaurar e excluir |
-| Notas | Listar, buscar, criar, editar, duplicar, mover, concluir e excluir |
-| Tags e tarefas | Criar, editar, aplicar, remover, trocar e executar ações |
+| Backup | Exportar a conta ou um bundle em JSON estruturado |
+| Bundles | Listar, consultar, criar, editar, reordenar, arquivar, restaurar e excluir |
+| Notas | Listar, buscar, criar, editar, reordenar, duplicar, mover, concluir e excluir |
+| Tags e tarefas | Gerenciar tags locais/globais, assinaturas, prioridade e ações |
 | Kanban | Configurar colunas ordenadas e mover notas para coluna/backlog |
 | Templates | Criar a partir de bundle, aplicar e excluir |
-| Files & Photos | Listar, enviar, anexar, desanexar e excluir |
+| Files & Photos | Listar, baixar até 10 MiB, enviar, anexar, desanexar e excluir |
+| Rich links | Gerar ou atualizar previews pela callable function nativa |
+| Lembretes | Listar metadados de lembretes anexados às notas |
 
 A busca filtra notas localmente porque o aplicativo também usa um índice/cache no
 cliente, não um endpoint Firestore de texto completo. Os limites são finitos por
@@ -133,8 +138,11 @@ o mapa compacto para agentes.
 
 - Endpoints Firebase e caminhos Firestore são detalhes de implementação, não uma
   promessa de compatibilidade.
-- Importação do Google Keep, exportação JSON, lembretes e geração derivada de rich
-  links foram observados, mas não são ferramentas de mutação na versão `0.1.0`.
+- Escritas de lembretes continuam bloqueadas até que o contrato Android de
+  agendamento/notificação possa ser validado end-to-end; persistir um documento
+  Firestore sem garantir o disparo não é considerado suporte funcional.
+- Importação do Google Keep permanece fora do MCP enquanto o fluxo oficial ainda
+  estiver em desenvolvimento.
 - Antes de excluir um arquivo da conta, desanexe-o das notas relevantes.
 - Contadores do documento de usuário podem atrasar; as listagens são a fonte
   operacional deste servidor.

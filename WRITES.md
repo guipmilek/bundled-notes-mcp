@@ -23,6 +23,14 @@ Firebase quando a confirmação não é enviada.
   e adiciona a referência da nota; falhas intermediárias tentam remover os
   registros já criados.
 - Desanexar mantém o arquivo no catálogo. Excluir o arquivo da conta é permanente.
+- Reordenações validam IDs antes de escrever posições; a ordem manual de notas
+  também seleciona o método de ordenação gerenciada do bundle.
+- Assinar/desassinar uma tag global altera somente a visibilidade no bundle e não
+  exclui a definição account-level.
+- Atualizar rich links chama a função oficial observada e relê a nota. O preview
+  pode enviar URLs presentes no conteúdo ao processador de links usado pelo app.
+- Exportação, listagem de lembretes e downloads são leituras. Downloads têm limite
+  rígido de 10 MiB e não retornam tokens ou URLs assinadas.
 
 O Firestore não oferece uma transação única para todos os fluxos multietapa usados
 pelo app. A compensação reduz resíduos, mas não substitui backup.

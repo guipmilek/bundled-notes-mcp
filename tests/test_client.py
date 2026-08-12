@@ -78,6 +78,20 @@ class MemoryStorage:
         self.deleted.append(object_name)
         self.uploaded.pop(object_name, None)
 
+    async def download(self, object_name: str, *, max_bytes: int) -> tuple[bytes, str]:
+        payload = await asyncio.to_thread(Path(self.uploaded[object_name]["file_path"]).read_bytes)
+        if len(payload) > max_bytes:
+            raise BundledNotesError("attachment_too_large_to_download", "too large")
+        return payload, "text/plain"
+
+
+class MemoryFunctions:
+    def __init__(self) -> None:
+        self.calls: list[tuple[str, dict[str, Any]]] = []
+
+    async def call(self, name: str, data: dict[str, Any]) -> None:
+        self.calls.append((name, copy.deepcopy(data)))
+
 
 @pytest.fixture
 def api() -> BundledNotesClient:
@@ -257,6 +271,70 @@ async def test_global_tag_delete_tolerates_legacy_null_array_fields(api: Bundled
 
     assert deleted["deleted"] is True
     assert tag["id"] not in (await api.get_bundle(first["id"]))["subscribedGlobalTagIds"]
+
+
+@pytest.mark.asyncio
+async def test_account_global_tags_subscription_and_priority(api: BundledNotesClient) -> None:
+    first = await api.create_bundle(BundleCreate(name="First"))
+    second = await api.create_bundle(BundleCreate(name="Second"))
+    global_tag = await api.create_tag(first["id"], TagCreate(name="Global", global_tag=True))
+    assert [tag["id"] for tag in await api.list_global_tags()] == [global_tag["id"]]
+
+    subscribed = await api.set_global_tag_subscription(second["id"], global_tag["id"], True)
+    assert subscribed["subscribedGlobalTagIds"] == [global_tag["id"]]
+    prioritized = await api.reorder_tags(second["id"], [global_tag["id"]])
+    assert prioritized["tagPriorityOrder"] == [global_tag["id"]]
+    unsubscribed = await api.set_global_tag_subscription(second["id"], global_tag["id"], False)
+    assert unsubscribed["subscribedGlobalTagIds"] == []
+
+
+@pytest.mark.asyncio
+async def test_manual_reordering_and_export(api: BundledNotesClient) -> None:
+    first = await api.create_bundle(BundleCreate(name="First"))
+    second = await api.create_bundle(BundleCreate(name="Second"))
+    one = await api.create_entry(first["id"], EntryCreate(title="One"))
+    two = await api.create_entry(first["id"], EntryCreate(title="Two"))
+
+    bundles = await api.reorder_bundles([second["id"], first["id"]])
+    entries = await api.reorder_entries(first["id"], [two["id"], one["id"]])
+    exported = await api.export_data(bundle_id=first["id"])
+
+    assert [row["indexPosition"] for row in bundles] == [0, 1]
+    assert [row["indexPosition"] for row in entries] == [0, 1]
+    assert (await api.get_bundle(first["id"]))["bundleEntrySortMethod"] == 4
+    assert exported["export_format"] == "bundled-notes-mcp-json"
+    assert [row["title"] for row in exported["bundles"][0]["entries"]] == ["One", "Two"]
+
+
+@pytest.mark.asyncio
+async def test_attachment_download_reminder_projection_and_rich_link_callable(
+    api: BundledNotesClient, tmp_path: Path
+) -> None:
+    storage = MemoryStorage()
+    functions = MemoryFunctions()
+    api.storage = storage  # type: ignore[assignment]
+    api.functions = functions  # type: ignore[assignment]
+    bundle = await api.create_bundle(BundleCreate(name="Rich"))
+    entry = await api.create_entry(bundle["id"], EntryCreate(title="Entry", content="https://example.com"))
+    fixture = tmp_path / "download.txt"
+    fixture.write_bytes(b"payload")
+    uploaded = await api.upload_attachment(bundle["id"], entry["id"], str(fixture))
+
+    downloaded = await api.download_attachment(uploaded["attachment"]["id"], 100)
+    entry_path = f"users/u/bundles/{bundle['id']}/entries/{entry['id']}"
+    reminder = {"type": 102, "text": "Tomorrow", "triggerTime": 123}
+    api.db.docs[entry_path]["attachments"]["reminder"] = reminder  # type: ignore[attr-defined]
+    refreshed = await api.refresh_link_previews(bundle["id"], entry["id"])
+
+    assert downloaded["content_base64"] == "cGF5bG9hZA=="
+    assert (await api.list_reminders())[0]["triggerTime"] == 123
+    assert refreshed["id"] == entry["id"]
+    assert functions.calls == [
+        (
+            "buildRichPreviewsForEntry",
+            {"uid": "u", "bundleId": bundle["id"], "entryId": entry["id"]},
+        )
+    ]
 
 
 @pytest.mark.asyncio

@@ -7,6 +7,7 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 ID_ALPHABET = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
 MAX_FILE_BYTES = 400 * 1024 * 1024
+MAX_MCP_DOWNLOAD_BYTES = 10 * 1024 * 1024
 
 SORT_METHODS = {
     "alphabetical": 0,

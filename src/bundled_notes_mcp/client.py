@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import base64
 import time
 from pathlib import Path
 from typing import Any
@@ -8,6 +9,7 @@ from typing import Any
 from .auth import FirebaseAuth
 from .errors import BundledNotesError
 from .firestore import Firestore
+from .functions import FirebaseFunctions
 from .models import (
     ATTACHMENT_TYPES,
     ENTRY_TYPES,
@@ -33,6 +35,7 @@ class BundledNotesClient:
         self.auth = auth
         self.db = Firestore(auth)
         self.storage = FirebaseStorage(auth)
+        self.functions = FirebaseFunctions(auth)
 
     async def uid(self) -> str:
         return (await self.auth.token()).uid
@@ -113,6 +116,16 @@ class BundledNotesClient:
         rows = await self.db.list(f"{await self.user_path()}/bundles", page_size=limit)
         values = [compact_document(row) for row in rows if include_archived or not row.get("archived", False)]
         return sorted(values, key=lambda row: (row.get("indexPosition", 0), str(row.get("name", "")).lower()))
+
+    async def reorder_bundles(self, bundle_ids: list[str]) -> list[dict[str, Any]]:
+        ordered = _unique_ids(bundle_ids)
+        known = {row["id"] for row in await self.list_bundles(include_archived=True, limit=1000)}
+        _require_known_ids(ordered, known, "bundle")
+        base = await self.user_path()
+        for position, bundle_id in enumerate(ordered):
+            await self.db.patch(f"{base}/bundles/{bundle_id}", {"indexPosition": position})
+        reread = {row["id"]: row for row in await self.list_bundles(include_archived=True, limit=1000)}
+        return [reread[bundle_id] for bundle_id in ordered]
 
     async def get_bundle(self, bundle_id: str) -> dict[str, Any]:
         return compact_document(await self._require(f"{await self.user_path()}/bundles/{bundle_id}"))
@@ -208,6 +221,17 @@ class BundledNotesClient:
 
     async def get_entry(self, bundle_id: str, entry_id: str) -> dict[str, Any]:
         return compact_document(await self._require(f"{await self.user_path()}/bundles/{bundle_id}/entries/{entry_id}"))
+
+    async def reorder_entries(self, bundle_id: str, entry_ids: list[str]) -> list[dict[str, Any]]:
+        ordered = _unique_ids(entry_ids)
+        known = {row["id"] for row in await self.list_entries(bundle_id, include_archived=True, limit=1000)}
+        _require_known_ids(ordered, known, "entry")
+        base = f"{await self.user_path()}/bundles/{bundle_id}"
+        await self._require(base)
+        for position, entry_id in enumerate(ordered):
+            await self.db.patch(f"{base}/entries/{entry_id}", {"indexPosition": position})
+        await self.db.patch(base, {"bundleEntrySortMethod": SORT_METHODS["managed_order"]})
+        return [await self.get_entry(bundle_id, entry_id) for entry_id in ordered]
 
     async def create_entry(self, bundle_id: str, spec: EntryCreate) -> dict[str, Any]:
         uid, entry_id, now = await self.uid(), new_id(), int(time.time() * 1000)
@@ -316,6 +340,33 @@ class BundledNotesClient:
                     compact_document(row) | {"scope": "global"} for row in globals_ if row.get("id") in subscribed
                 )
         return sorted(values, key=lambda row: (row.get("indexPosition", 10_000_000), str(row.get("name", "")).lower()))
+
+    async def list_global_tags(self, limit: int = 300) -> list[dict[str, Any]]:
+        rows = await self.db.list(f"{await self.user_path()}/tags", page_size=limit)
+        values = [compact_document(row) | {"scope": "global"} for row in rows]
+        return sorted(values, key=lambda row: (row.get("indexPosition", 10_000_000), str(row.get("name", "")).lower()))
+
+    async def set_global_tag_subscription(self, bundle_id: str, tag_id: str, subscribed: bool) -> dict[str, Any]:
+        bundle = await self.get_bundle(bundle_id)
+        base = await self.user_path()
+        await self._require(f"{base}/tags/{tag_id}")
+        ids = list(bundle.get("subscribedGlobalTagIds") or [])
+        if subscribed:
+            ids = list(dict.fromkeys([*ids, tag_id]))
+        else:
+            ids = [item for item in ids if item != tag_id]
+        await self.db.patch(
+            f"{base}/bundles/{bundle_id}",
+            {"subscribedGlobalTagIds": ids, "lastEditedTime": int(time.time() * 1000)},
+        )
+        return await self.get_bundle(bundle_id)
+
+    async def reorder_tags(self, bundle_id: str, tag_ids: list[str]) -> dict[str, Any]:
+        ordered = _unique_ids(tag_ids)
+        known = {row["id"] for row in await self.list_tags(bundle_id)}
+        _require_known_ids(ordered, known, "tag")
+        await self.db.patch(f"{await self.user_path()}/bundles/{bundle_id}", {"tagPriorityOrder": ordered})
+        return await self.get_bundle(bundle_id)
 
     async def create_tag(self, bundle_id: str, spec: TagCreate) -> dict[str, Any]:
         uid, tag_id = await self.uid(), new_id()
@@ -545,6 +596,103 @@ class BundledNotesClient:
         rows = await self.db.list(f"{await self.user_path()}/attachments", page_size=limit)
         return [compact_document(row) for row in rows]
 
+    async def download_attachment(self, attachment_id: str, max_bytes: int) -> dict[str, Any]:
+        uid = await self.uid()
+        record = compact_document(await self._require(f"users/{uid}/attachments/{attachment_id}"))
+        payload, content_type = await self.storage.download(
+            f"users/{uid}/{record.get('storageId', attachment_id)}", max_bytes=max_bytes
+        )
+        return {
+            "attachment_id": attachment_id,
+            "filename": record.get("text") or attachment_id,
+            "content_type": content_type,
+            "file_size": len(payload),
+            "content_base64": base64.b64encode(payload).decode("ascii"),
+        }
+
+    async def list_reminders(self, limit: int = 300) -> list[dict[str, Any]]:
+        """List reminder attachment projections without inventing Android scheduling writes."""
+        reminders: list[dict[str, Any]] = []
+        for bundle in await self.list_bundles(include_archived=True, limit=1000):
+            for entry in await self.list_entries(bundle["id"], include_archived=True, limit=1000):
+                for reminder_id, raw in (entry.get("attachments") or {}).items():
+                    if isinstance(raw, dict) and raw.get("type") == ATTACHMENT_TYPES["reminder_text"]:
+                        reminders.append(
+                            {
+                                "id": reminder_id,
+                                "bundle_id": bundle["id"],
+                                "entry_id": entry["id"],
+                                **{key: value for key, value in raw.items() if key != "uid"},
+                            }
+                        )
+                        if len(reminders) >= limit:
+                            return reminders
+        return reminders
+
+    async def export_data(
+        self, *, bundle_id: str | None = None, include_archived: bool = True, include_attachment_catalog: bool = True
+    ) -> dict[str, Any]:
+        bundles = await self.list_bundles(include_archived=include_archived, limit=1000)
+        if bundle_id is not None:
+            bundle = await self.get_bundle(bundle_id)
+            bundles = [bundle] if include_archived or not bundle.get("archived", False) else []
+        exported_bundles = []
+        for bundle in bundles:
+            exported_bundles.append(
+                {
+                    "bundle": bundle,
+                    "tags": await self.list_tags(bundle["id"], include_global=False),
+                    "entries": await self.list_entries(bundle["id"], include_archived=include_archived, limit=1000),
+                }
+            )
+        templates: list[dict[str, Any]] = []
+        if bundle_id is None:
+            base = await self.user_path()
+            for template in await self.list_templates(limit=1000):
+                template_id = template["id"]
+                templates.append(
+                    {
+                        "template": template,
+                        "tags": [
+                            compact_document(row)
+                            for row in await self.db.list(f"{base}/templates/{template_id}/tags", page_size=1000)
+                        ],
+                        "entries": [
+                            compact_document(row)
+                            for row in await self.db.list(f"{base}/templates/{template_id}/entries", page_size=1000)
+                        ],
+                    }
+                )
+        return {
+            "export_format": "bundled-notes-mcp-json",
+            "export_version": 1,
+            "scope": {"bundle_id": bundle_id, "include_archived": include_archived},
+            "bundles": exported_bundles,
+            "global_tags": await self.list_global_tags(limit=1000) if bundle_id is None else [],
+            "templates": templates,
+            "attachments": await self.list_attachments(limit=1000)
+            if bundle_id is None and include_attachment_catalog
+            else [],
+        }
+
+    async def refresh_link_previews(
+        self, bundle_id: str, entry_id: str, attachment_id: str | None = None
+    ) -> dict[str, Any]:
+        entry = await self.get_entry(bundle_id, entry_id)
+        if attachment_id is not None:
+            attachment = (entry.get("attachments") or {}).get(attachment_id)
+            if not isinstance(attachment, dict) or attachment.get("type") != ATTACHMENT_TYPES["rich_link_preview"]:
+                raise BundledNotesError("not_found", "The requested rich-link preview was not found on this entry.")
+        payload: dict[str, Any] = {
+            "uid": await self.uid(),
+            "bundleId": bundle_id,
+            "entryId": entry_id,
+        }
+        if attachment_id is not None:
+            payload["refreshAttachmentId"] = attachment_id
+        await self.functions.call("buildRichPreviewsForEntry", payload)
+        return await self.get_entry(bundle_id, entry_id)
+
     async def upload_attachment(self, bundle_id: str, entry_id: str, file_path: str) -> dict[str, Any]:
         uid, attachment_id = await self.uid(), new_id()
         entry = await self.get_entry(bundle_id, entry_id)
@@ -730,3 +878,17 @@ def _verify_storage_attachment(
 
 def _attachment_record_matches(actual: dict[str, Any], expected: dict[str, Any]) -> bool:
     return all(actual.get(key) == value for key, value in expected.items())
+
+
+def _unique_ids(values: list[str]) -> list[str]:
+    if not values:
+        raise BundledNotesError("empty_order", "At least one ID is required.")
+    if len(values) != len(set(values)):
+        raise BundledNotesError("duplicate_id", "Ordering IDs must be unique.")
+    return list(values)
+
+
+def _require_known_ids(values: list[str], known: set[str], kind: str) -> None:
+    unknown = [value for value in values if value not in known]
+    if unknown:
+        raise BundledNotesError("not_found", f"One or more {kind} IDs were not found.", details={"ids": unknown})
