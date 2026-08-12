@@ -1,10 +1,11 @@
 # Contribuindo
 
 Este projeto usa endpoints não documentados e pode acessar dados pessoais reais.
-Mudanças devem ser pequenas, revisáveis e acompanhadas de testes.
+Mudanças devem ser pequenas, revisáveis e acompanhadas de testes. Antes de começar,
+leia `AGENTS.md`, `llms.txt` e `docs/agent-playbook.md`.
 
 ```powershell
-uv sync --extra dev
+uv sync --locked --extra dev
 uv run ruff format .
 uv run ruff check .
 uv run pytest
@@ -21,7 +22,11 @@ Regras:
 - Atualize `llms.txt` e a documentação ao alterar contratos ou arquitetura.
 - Para mudanças do Bundled Notes Web, siga `docs/schema-maintenance.md` e anexe
   somente relatórios sanitizados de campos/tipos.
-- Testes ao vivo devem usar um prefixo único e remover todos os artefatos.
+- Testes ao vivo devem usar um prefixo único, reler cada escrita e remover todos
+  os artefatos.
+- Mantenha `README.md` e `README.en.md` equivalentes em capacidades, limites,
+  comandos e deploy.
+- Verifique links e arquivos de manutenção com `tests/test_repo_safety.py`.
 
 O projeto foi desenvolvido majoritariamente com assistência de IA. Contribuições
 assistidas são aceitas, mas precisam de revisão humana e verificação local.

@@ -1,22 +1,54 @@
-# bundled-notes-mcp
+# Bundled Notes MCP
 
-Unofficial FastMCP 3 server for Bundled Notes Web using Firebase Auth refresh tokens, Firestore REST, and Firebase Storage REST.
+Unofficial Python/FastMCP 3 server for Bundled Notes Web. It exposes 43 tools and
+supports local stdio plus an authenticated Prefect Horizon deployment.
 
-Entry point: `src/bundled_notes_mcp/server.py`
-Hosted endpoint: `https://bundled-notes-mcp.fastmcp.app/mcp` (Prefect Horizon authentication required)
-Tool catalog: `src/bundled_notes_mcp/tools.py`
-Domain operations: `src/bundled_notes_mcp/client.py`
-Auth/config: `src/bundled_notes_mcp/auth.py`, `config.py`
-Wire codec: `src/bundled_notes_mcp/firestore.py`
-Enums/schemas: `src/bundled_notes_mcp/models.py`
-Storage: `src/bundled_notes_mcp/storage.py`
-Schema compatibility: `src/bundled_notes_mcp/schema.py`, `docs/schema-maintenance.md`
-Hosted compatibility overrides: `src/bundled_notes_mcp/overrides.py`
+## Core context
 
-Rules: every write requires `confirm=true`; never expose tokens; prefer archive over delete; delete bundle/template recursively; partial-patch existing docs; re-read writes; verify Storage size/metadata before committing attachment references; do not retry non-idempotent calls.
-Hosted data controls: keep MCP request and response payload logging disabled.
+- Runtime: Python `>=3.11`
+- Package manager: uv
+- MCP framework: FastMCP 3
+- Remote entrypoint: `src/bundled_notes_mcp/server.py:mcp`
+- Hosted endpoint: `https://bundled-notes-mcp.fastmcp.app/mcp`
+- MCP authentication: Horizon-managed OAuth
+- Bundled Notes authentication: Firebase API key, refresh token, and optional UID assertion
+- Upstream transports: Firestore REST, callable functions, and Firebase Storage REST
+- Public version discovery: `bundled_status.server_version`
+- Schema contract: versioned, sanitized, fingerprinted, and classified as compatible/additive/breaking
+- Update semantics: partial patch, post-write re-read, and compensating cleanup
+- Live tests: uniquely prefixed disposable records with baseline restoration
+- Reminder support: read-only until scheduling behavior is validated end-to-end
 
-Tools:
+## Important files
+
+- `src/bundled_notes_mcp/server.py`: FastMCP instance and entrypoint.
+- `src/bundled_notes_mcp/tools.py`: public schemas, annotations, and confirmation gates.
+- `src/bundled_notes_mcp/client.py`: domain operations and verification.
+- `src/bundled_notes_mcp/auth.py`: Firebase refresh/sign-in and token lock.
+- `src/bundled_notes_mcp/firestore.py`: Firestore codec and transport.
+- `src/bundled_notes_mcp/storage.py`: upload, metadata, bounded download, and delete.
+- `src/bundled_notes_mcp/models.py`: schemas, enums, IDs, and colors.
+- `src/bundled_notes_mcp/schema.py`: sanitized observation and drift contract.
+- `src/bundled_notes_mcp/overrides.py`: hosted-client compatibility wrappers.
+- `docs/README.md`: maintainer documentation index.
+- `docs/schema-maintenance.md`: upstream change and official-API migration playbook.
+
+## Commands
+
+```powershell
+uv sync --locked --extra dev
+uv run ruff format --check .
+uv run ruff check .
+uv run pytest
+uv run fastmcp inspect src/bundled_notes_mcp/server.py:mcp
+uv build
+```
+
+Use `scripts/schema_audit.py` for read-only drift checks. Run authenticated
+`scripts/live_integration.py` only with authorization and disposable test data.
+
+## Tool catalog
+
 - `bundled_status`
 - `bundled_current_user`
 - `bundled_schema_status`
@@ -61,4 +93,10 @@ Tools:
 - `bundled_remove_attachment`
 - `bundled_delete_account_attachment`
 
-Verification: `uv run ruff check .`, `uv run pytest`, `uv build`.
+## Security
+
+Every write requires `confirm=true`. Never expose or commit credentials, tokens,
+sessions, rollout exports, Firebase responses, note contents, filenames, real
+attachments, signed URLs, or account data. Preserve unknown fields, re-read writes,
+avoid retrying non-idempotent operations, and keep Horizon payload logging disabled.
+

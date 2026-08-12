@@ -25,3 +25,13 @@ every generated record follows the exact `RUN_ID`. Template application must als
 rebind every copied local tag's `bundleId` to the destination bundle.
 
 Never point an integration run at pre-existing IDs. Do not infer successful authentication from configuration alone. Avoid retries around creates, moves, uploads, and deletes.
+
+
+## Repository consistency
+
+`tests/test_repo_safety.py` keeps the documented tool catalog equal to the runtime
+contract, requires the shared maintainer document set, checks relative Markdown
+links, verifies bilingual release markers, and confirms sensitive report patterns
+remain ignored. The live release gate must also confirm all 43 tools are exposed
+and executed, including the exact 49-byte Base64 attachment lifecycle.
+

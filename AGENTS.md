@@ -9,7 +9,7 @@ stdio and the authenticated Prefect Horizon deployment at
 
 ## Mandatory rules
 
-1. Read `llms.txt` before non-trivial changes.
+1. Read `llms.txt` and `docs/agent-playbook.md` before non-trivial changes.
 2. Keep every write/destructive tool gated by `confirm: true`.
 3. Keep MCP behavior annotations explicit and accurate.
 4. Never commit `.env`, credentials, refresh/ID tokens, sessions, API responses,
@@ -24,6 +24,19 @@ stdio and the authenticated Prefect Horizon deployment at
     disabled; production data can contain private notes and attachment metadata.
 11. Before adapting to a Bundled Notes release, run the sanitized schema audit and
     follow `docs/schema-maintenance.md`; never commit rollout/session exports.
+
+## Workflow
+
+1. Confirm repository, branch, and working-tree scope.
+2. Classify the change and read its owning module plus the relevant document.
+3. For upstream changes, run the sanitized schema audit before any live write.
+4. Implement the smallest compatible change with focused positive and negative tests.
+5. Run the full verification ladder and update both READMEs, `llms.txt`, `WRITES.md`, and relevant docs when public behavior changes.
+6. Use disposable prefixed records for an authorized live audit, then prove baseline restoration.
+7. Publish through the approved GitHub workflow and stop before merge pending owner approval.
+
+See `docs/agent-architecture-map.md`, `docs/agent-task-template.md`, and
+`PROJECT_PATHS.md` for routing and reusable task context.
 
 ## Ownership
 
@@ -50,3 +63,12 @@ uv build
 
 Do not run authenticated integration scripts against pre-existing IDs. Never stage
 `.env`, test attachments, or private account data.
+
+## Stop rules
+
+Stop and report instead of guessing when the sanitized schema reports breaking
+drift, a write contract cannot be reproduced safely, cleanup cannot restore the
+baseline, production credentials are unavailable, or a requested action would
+expose private account data. Do not merge or deploy without the repository owner's
+explicit approval.
+

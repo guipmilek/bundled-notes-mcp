@@ -24,7 +24,7 @@ def test_env_example_contains_no_assigned_credentials() -> None:
     assert values["BUNDLED_FIREBASE_UID"] == ""
 
 
-def test_open_source_community_files_exist() -> None:
+def test_open_source_and_maintainer_files_exist() -> None:
     required = {
         ".github/workflows/ci.yml",
         ".github/PULL_REQUEST_TEMPLATE.md",
@@ -32,12 +32,46 @@ def test_open_source_community_files_exist() -> None:
         "AGENTS.md",
         "CONTRIBUTING.md",
         "LICENSE",
+        "PROJECT_PATHS.md",
         "README.en.md",
         "README.md",
         "SECURITY.md",
         "WRITES.md",
+        "docs/README.md",
+        "docs/agent-architecture-map.md",
+        "docs/agent-playbook.md",
+        "docs/agent-task-template.md",
+        "docs/chatgpt-app-setup.md",
+        "docs/deployment.md",
+        "docs/repository-standard.md",
     }
     assert all((ROOT / relative).is_file() for relative in required)
+
+
+def test_relative_markdown_links_resolve() -> None:
+    markdown_files = [*ROOT.glob("*.md"), *ROOT.joinpath("docs").glob("*.md")]
+    broken: list[tuple[str, str]] = []
+    for document in markdown_files:
+        content = document.read_text(encoding="utf-8")
+        for target in re.findall(r"(?<!!)\[[^]]+\]\(([^)]+)\)", content):
+            path = target.split("#", 1)[0]
+            if not path or "://" in path or path.startswith("mailto:"):
+                continue
+            if not (document.parent / path).resolve().is_file():
+                broken.append((document.relative_to(ROOT).as_posix(), target))
+    assert broken == []
+
+
+def test_readmes_share_release_contract() -> None:
+    readmes = [(ROOT / name).read_text(encoding="utf-8") for name in ("README.md", "README.en.md")]
+    required_markers = {
+        "43",
+        "bundled_schema_status",
+        "src/bundled_notes_mcp/server.py:mcp",
+        "https://bundled-notes-mcp.fastmcp.app/mcp",
+    }
+    for readme in readmes:
+        assert all(marker in readme for marker in required_markers)
 
 
 def test_sensitive_session_exports_are_ignored() -> None:

@@ -47,7 +47,7 @@ Consulte [WRITES.md](WRITES.md) antes de habilitar mutações.
 Requer Python 3.11+ e [uv](https://docs.astral.sh/uv/).
 
 ```powershell
-uv sync --extra dev
+uv sync --locked --extra dev
 ```
 
 O bootstrap descobre a configuração pública atual do site e obtém um refresh token
@@ -103,6 +103,8 @@ vez sem confirmação, revise IDs e payload, depois repita com `confirm=true`.
 
 ## Ferramentas
 
+O catálogo da versão `0.3.0` expõe **43 ferramentas**. A leitura de lembretes é suportada; criação e agendamento permanecem deliberadamente bloqueados até existir um contrato upstream validado end-to-end.
+
 | Grupo | Capacidades |
 | --- | --- |
 | Conta | Status autenticado e projeção segura do usuário |
@@ -124,15 +126,15 @@ padrão; aumente-os deliberadamente em contas grandes.
 ## Desenvolvimento
 
 ```powershell
+uv sync --locked --extra dev
+uv run ruff format --check .
 uv run ruff check .
 uv run pytest
+uv run fastmcp inspect src/bundled_notes_mcp/server.py:mcp
 uv build
 ```
 
-Consulte [engenharia reversa](docs/reverse-engineering.md),
-[modelo de dados](docs/data-model.md), [manutenção de schema](docs/schema-maintenance.md)
-e [testes](docs/testing.md). `llms.txt` contém
-o mapa compacto para agentes.
+Consulte o [índice de documentação](docs/README.md), o [mapa de arquitetura](docs/agent-architecture-map.md), o [playbook para agentes](docs/agent-playbook.md), o [guia de deploy](docs/deployment.md), a [manutenção de schema](docs/schema-maintenance.md) e os [testes](docs/testing.md). O arquivo `llms.txt` contém o mapa compacto e o catálogo exato para agentes.
 
 ## Limites conhecidos
 
