@@ -69,3 +69,14 @@ Keep MCP tool names and output shapes stable when possible. When Bundled Notes
 publishes an official API or MCP, implement it behind `BundledNotesClient`, run the
 same contract and integration suite against both backends, then retire Firebase
 access only after parity and rollback are proven.
+
+
+## Maintenance cadence and pull requests
+
+The scheduled read-only audit is the early-warning mechanism, not an automatic
+production migration. When the fingerprint or Bundled Notes behavior changes,
+prepare a scoped branch and pull request with the sanitized drift summary,
+compatibility decision, focused tests, documentation updates, and disposable live
+audit results. Publish through the approved GitHub connector workflow and do not
+merge until the repository owner explicitly approves it.
+

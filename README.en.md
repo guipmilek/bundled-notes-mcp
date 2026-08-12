@@ -47,7 +47,7 @@ Read [WRITES.md](WRITES.md) before enabling mutations.
 Requires Python 3.11+ and [uv](https://docs.astral.sh/uv/).
 
 ```powershell
-uv sync --extra dev
+uv sync --locked --extra dev
 uv run bundled-notes-bootstrap-auth --output .env
 uv run bundled-notes-mcp
 ```
@@ -87,6 +87,8 @@ without confirmation, inspect the IDs and payload, and repeat with `confirm=true
 
 ## Tool groups
 
+Version `0.3.0` exposes **43 tools**. Reminder metadata is readable; reminder creation and scheduling remain deliberately blocked until an upstream contract is validated end-to-end.
+
 | Group | Capabilities |
 | --- | --- |
 | Account | Authenticated status and safe user projection |
@@ -107,7 +109,7 @@ a local cache/index instead of a Firestore full-text endpoint.
 ## Development
 
 ```powershell
-uv sync --extra dev
+uv sync --locked --extra dev
 uv run ruff format --check .
 uv run ruff check .
 uv run pytest
@@ -115,9 +117,7 @@ uv run fastmcp inspect src/bundled_notes_mcp/server.py:mcp
 uv build
 ```
 
-See [reverse engineering](docs/reverse-engineering.md),
-[data model](docs/data-model.md), [schema maintenance](docs/schema-maintenance.md),
-and [testing](docs/testing.md).
+See the [documentation index](docs/README.md), [architecture map](docs/agent-architecture-map.md), [agent playbook](docs/agent-playbook.md), [deployment guide](docs/deployment.md), [schema maintenance](docs/schema-maintenance.md), and [testing](docs/testing.md).
 
 ## Known limits
 
