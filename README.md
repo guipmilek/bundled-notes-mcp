@@ -25,6 +25,11 @@ pelo aplicativo web.
 > Este projeto não é afiliado ao Bundled Notes. O aplicativo não publica uma API
 > estável ou suportada; mudanças de schema ou regras Firebase podem quebrar a
 > integração. Mantenha backup e revise toda escrita.
+>
+> **Este servidor é vinculado a uma única conta.** Faça fork do repositório,
+> publique seu próprio deployment no Prefect Horizon e configure somente os seus
+> secrets. Não use nem compartilhe o deployment de outra pessoa: ele acessa a
+> conta definida nos secrets daquele servidor.
 
 ## Contrato de segurança
 
@@ -67,20 +72,19 @@ informe a chave pública atual com `--api-key`.
 
 ## Executar
 
-### Prefect Horizon (hospedado)
+### Prefect Horizon (seu próprio deployment)
 
-O deployment oficial deste repositório está disponível em:
+1. Faça fork deste repositório.
+2. Entre no Prefect Horizon com GitHub e selecione o seu fork.
+3. Use o entrypoint `src/bundled_notes_mcp/server.py:mcp`.
+4. Use `pyproject.toml` como arquivo de dependências.
+5. Cadastre somente as credenciais da sua conta Bundled Notes como secrets.
+6. Mantenha **Authentication** habilitada e faça o deploy.
 
-```text
-https://bundled-notes-mcp.fastmcp.app/mcp
-```
-
-O endpoint exige autenticação do Horizon e promove automaticamente builds bem-
-sucedidos da branch `main`. No Horizon, use o entrypoint
-`src/bundled_notes_mcp/server.py:mcp`, `pyproject.toml` como arquivo de dependências
-e configure as variáveis Firebase como secrets. Os payloads MCP de requisição e
-resposta devem permanecer desabilitados nos logs porque podem conter notas e
-metadados privados.
+O endpoint será semelhante a `https://seu-servidor.fastmcp.app/mcp`. Cada fork e
+deployment deve representar uma única conta. Não conecte ao ChatGPT um deployment
+publicado por outra pessoa. Mantenha os payloads MCP de requisição e resposta
+desabilitados nos logs porque eles podem conter notas e metadados privados.
 
 ### Local (stdio)
 
@@ -107,13 +111,14 @@ vez sem confirmação, revise IDs e payload, depois repita com `confirm=true`.
 
 ## Conectar ao ChatGPT
 
-Use estes metadados ao adicionar o MCP no ChatGPT:
+Depois de publicar o seu próprio fork, use estes metadados ao adicionar o MCP no
+ChatGPT:
 
 | Campo | Valor |
 | --- | --- |
 | Nome | `Bundled Notes` |
 | Descrição | `Consulte e gerencie bundles, notas, tags, Kanban, templates e arquivos da sua conta Bundled Notes, com confirmação obrigatória antes de alterações.` |
-| URL | `https://bundled-notes-mcp.fastmcp.app/mcp` |
+| URL | `https://seu-servidor.fastmcp.app/mcp` — substitua pela URL do seu deployment |
 | Autenticação | OAuth |
 | Imagem | [`assets/bundled-notes-mcp.png`](assets/bundled-notes-mcp.png) — PNG quadrado, 512 × 512, menor que 100 KB |
 

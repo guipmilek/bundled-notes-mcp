@@ -1,37 +1,44 @@
 # Deploy no Prefect Horizon
 
-O deploy remoto mantido é o Prefect Horizon. O Horizon clona o repositório,
-instala `pyproject.toml`, importa o objeto FastMCP e fornece URL, OAuth, CI/CD e
-previews.
+O Prefect Horizon clona um fork, instala `pyproject.toml`, importa o objeto
+FastMCP e fornece URL, OAuth, CI/CD e previews.
+
+> [!IMPORTANT]
+> Cada usuário deve fazer fork deste repositório e publicar o próprio deployment.
+> Não use nem compartilhe um deployment de terceiros: ele acessa a conta Bundled
+> Notes configurada nos secrets daquele servidor.
 
 ## Modelo operacional
 
-- Um deployment por conta Bundled Notes configurada.
-- Horizon OAuth controla quem acessa o MCP.
-- Credenciais Firebase ficam somente nos secrets do servidor.
+- Um fork e um deployment por conta Bundled Notes.
+- Horizon OAuth controla quem acessa aquele MCP.
+- Credenciais Firebase ficam somente nos secrets do servidor do próprio usuário.
 - Tokens renovados permanecem em memória; cold starts usam o refresh token.
 - Payload logging deve ficar desabilitado porque notas e metadados são privados.
 
 ## Configuração
 
-1. Selecione o repositório no Horizon.
-2. Configure o entrypoint `src/bundled_notes_mcp/server.py:mcp`.
-3. Use `pyproject.toml` como arquivo de dependências.
-4. Mantenha a autenticação do Horizon habilitada.
-5. Cadastre `BUNDLED_FIREBASE_API_KEY`, `BUNDLED_FIREBASE_REFRESH_TOKEN` e,
-   preferencialmente, `BUNDLED_FIREBASE_UID` como secrets.
-6. Faça deploy e teste `bundled_status` e `bundled_schema_status` antes de escritas.
+1. Faça fork do repositório no GitHub.
+2. Acesse <https://horizon.prefect.io/> com GitHub e selecione o seu fork.
+3. Configure o entrypoint `src/bundled_notes_mcp/server.py:mcp`.
+4. Use `pyproject.toml` como arquivo de dependências.
+5. Mantenha a autenticação do Horizon habilitada.
+6. Cadastre `BUNDLED_FIREBASE_API_KEY`, `BUNDLED_FIREBASE_REFRESH_TOKEN` e,
+   preferencialmente, `BUNDLED_FIREBASE_UID` da sua conta como secrets.
+7. Faça deploy e teste `bundled_status` e `bundled_schema_status` antes de escritas.
 
-O endpoint mantido é:
+O endpoint publicado terá formato semelhante a:
 
 ```text
-https://bundled-notes-mcp.fastmcp.app/mcp
+https://seu-servidor.fastmcp.app/mcp
 ```
+
+Use somente essa URL do seu próprio deployment ao conectar clientes MCP.
 
 ## Atualização do catálogo
 
-Quando uma versão adiciona ferramentas ou parâmetros, publique o commit, aguarde o
-build saudável e reconecte o servidor nos clientes que mantiverem o catálogo em
+Quando uma versão adiciona ferramentas ou parâmetros, atualize o seu fork, aguarde
+o build saudável e reconecte o servidor nos clientes que mantiverem o catálogo em
 cache. Valide versão, contrato de schema e contagem de ferramentas no Horizon
 Inspector e no cliente final.
 

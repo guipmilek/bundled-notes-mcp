@@ -70,7 +70,7 @@ def test_readmes_share_release_contract() -> None:
         "43",
         "bundled_schema_status",
         "src/bundled_notes_mcp/server.py:mcp",
-        "https://bundled-notes-mcp.fastmcp.app/mcp",
+        "https://seu-servidor.fastmcp.app/mcp",
     }
     for readme in readmes:
         assert all(marker in readme for marker in required_markers)
@@ -89,3 +89,20 @@ def test_chatgpt_connector_icon_contract() -> None:
     assert len(data) <= 100 * 1024
     width, height = struct.unpack(">II", data[16:24])
     assert (width, height) == (512, 512)
+
+
+def test_public_docs_never_advertise_the_maintainer_deployment() -> None:
+    public_docs = [
+        ROOT / "README.md",
+        ROOT / "README.en.md",
+        ROOT / "docs/chatgpt-app-setup.md",
+        ROOT / "docs/deployment.md",
+        ROOT / "SECURITY.md",
+        ROOT / "llms.txt",
+        ROOT / "AGENTS.md",
+        ROOT / "PROJECT_PATHS.md",
+    ]
+    combined = "\n".join(path.read_text(encoding="utf-8") for path in public_docs)
+    assert "https://bundled-notes-mcp.fastmcp.app/mcp" not in combined
+    assert "Um fork e um deployment por conta" in combined
+    assert "one deployment per account" in combined
