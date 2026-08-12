@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import re
+import struct
 from pathlib import Path
 
 from tests.test_tools import EXPECTED_TOOLS
@@ -30,6 +31,7 @@ def test_open_source_and_maintainer_files_exist() -> None:
         ".github/PULL_REQUEST_TEMPLATE.md",
         ".github/ISSUE_TEMPLATE/bug_report.yml",
         "AGENTS.md",
+        "assets/bundled-notes-mcp.png",
         "CONTRIBUTING.md",
         "LICENSE",
         "PROJECT_PATHS.md",
@@ -78,3 +80,12 @@ def test_sensitive_session_exports_are_ignored() -> None:
     ignored = (ROOT / ".gitignore").read_text(encoding="utf-8").splitlines()
     assert "rollout-*.jsonl" in ignored
     assert "schema-report*.json" in ignored
+
+
+def test_chatgpt_connector_icon_contract() -> None:
+    icon = ROOT / "assets/bundled-notes-mcp.png"
+    data = icon.read_bytes()
+    assert data.startswith(b"\x89PNG\r\n\x1a\n")
+    assert len(data) <= 100 * 1024
+    width, height = struct.unpack(">II", data[16:24])
+    assert (width, height) == (512, 512)

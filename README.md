@@ -3,6 +3,10 @@
   <img src="https://img.shields.io/badge/lang-pt--br-green?style=flat-square&amp;labelColor=202024" alt="Português" />
 </p>
 
+<p align="center">
+  <img src="./assets/bundled-notes-mcp.png" alt="Bundled Notes" width="120" />
+</p>
+
 <h1 id="top" align="center">Bundled Notes MCP</h1>
 
 <p align="center">
@@ -100,6 +104,23 @@ BUNDLED_FIREBASE_UID = "..."
 
 Comece com `bundled_status` e `bundled_list_bundles`. Para uma escrita, chame uma
 vez sem confirmação, revise IDs e payload, depois repita com `confirm=true`.
+
+## Conectar ao ChatGPT
+
+Use estes metadados ao adicionar o MCP no ChatGPT:
+
+| Campo | Valor |
+| --- | --- |
+| Nome | `Bundled Notes` |
+| Descrição | `Consulte e gerencie bundles, notas, tags, Kanban, templates e arquivos da sua conta Bundled Notes, com confirmação obrigatória antes de alterações.` |
+| URL | `https://bundled-notes-mcp.fastmcp.app/mcp` |
+| Autenticação | OAuth |
+| Imagem | [`assets/bundled-notes-mcp.png`](assets/bundled-notes-mcp.png) — PNG quadrado, 512 × 512, menor que 100 KB |
+
+Ative o modo de desenvolvedor em **Configurações → Segurança e login**, abra
+**Plugins**, selecione **+**, preencha os campos acima e conclua a autenticação.
+O passo a passo completo, incluindo validação e atualização do catálogo, está no
+[guia de conexão com o ChatGPT](docs/chatgpt-app-setup.md).
 
 ## Ferramentas
 
