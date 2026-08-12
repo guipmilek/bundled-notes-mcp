@@ -65,15 +65,19 @@ def test_relative_markdown_links_resolve() -> None:
 
 
 def test_readmes_share_release_contract() -> None:
-    readmes = [(ROOT / name).read_text(encoding="utf-8") for name in ("README.md", "README.en.md")]
-    required_markers = {
+    readmes = {
+        "README.md": "https://seu-servidor.fastmcp.app/mcp",
+        "README.en.md": "https://your-server.fastmcp.app/mcp",
+    }
+    shared_markers = {
         "43",
         "bundled_schema_status",
         "src/bundled_notes_mcp/server.py:mcp",
-        "https://seu-servidor.fastmcp.app/mcp",
     }
-    for readme in readmes:
-        assert all(marker in readme for marker in required_markers)
+    for name, deployment_placeholder in readmes.items():
+        readme = (ROOT / name).read_text(encoding="utf-8")
+        assert all(marker in readme for marker in shared_markers)
+        assert deployment_placeholder in readme
 
 
 def test_sensitive_session_exports_are_ignored() -> None:
