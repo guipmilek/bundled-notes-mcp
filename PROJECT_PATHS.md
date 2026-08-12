@@ -19,7 +19,7 @@ All paths are repository-relative so forks and local checkouts remain portable.
 - Python `>=3.11`
 - uv for dependency and command execution
 - FastMCP 3
-- Prefect Horizon for the maintained remote deployment
+- Prefect Horizon for one user-owned fork/deployment per account
 - Firebase Auth, Firestore REST, callable functions, and Firebase Storage behind
   `BundledNotesClient`
 

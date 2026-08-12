@@ -9,7 +9,7 @@ supports local stdio plus an authenticated Prefect Horizon deployment.
 - Package manager: uv
 - MCP framework: FastMCP 3
 - Remote entrypoint: `src/bundled_notes_mcp/server.py:mcp`
-- Hosted endpoint: `https://bundled-notes-mcp.fastmcp.app/mcp`
+- Deployment model: one user-owned fork and Prefect Horizon deployment per account; never use a maintainer or third-party endpoint
 - MCP authentication: Horizon-managed OAuth
 - Bundled Notes authentication: Firebase API key, refresh token, and optional UID assertion
 - Upstream transports: Firestore REST, callable functions, and Firebase Storage REST

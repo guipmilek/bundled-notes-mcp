@@ -4,8 +4,9 @@
 
 Unofficial Python/FastMCP server for Bundled Notes Web. Source lives under
 `src/bundled_notes_mcp/`; tests live under `tests/`. Supported runtimes are local
-stdio and the authenticated Prefect Horizon deployment at
-`https://bundled-notes-mcp.fastmcp.app/mcp`.
+stdio and user-owned Prefect Horizon deployments. Every user must fork the
+repository and publish one deployment per account; never advertise or reuse a
+maintainer or third-party endpoint.
 
 ## Mandatory rules
 
