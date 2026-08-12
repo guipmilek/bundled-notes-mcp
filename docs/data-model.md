@@ -33,6 +33,16 @@ Web layouts: compact `0`, grid `1`, standard/card `2`. Markdown flavors: `legacy
 
 Attachment types: rich link `1`, file from device/account `5/6`, image from account/device `17/18`, image URL `32`, arbitrary text `99`, reminder text `102`.
 
+Manual bundle and entry ordering uses `indexPosition`; manual entry ordering also
+sets `bundleEntrySortMethod=4`. Tag priority uses the ordered bundle field
+`tagPriorityOrder`, while account-global tag visibility is stored per bundle in
+`subscribedGlobalTagIds`.
+
+Rich-link generation calls the authenticated Firebase callable function
+`buildRichPreviewsForEntry` and then re-reads the entry. Reminder type `102` is
+readable, but Android scheduling writes are intentionally unsupported until their
+notification semantics can be observed and tested.
+
 Template tag snapshots can retain the source bundle ID while stored below
 `templates/{templateId}/tags`. When a template is applied, copied local tags are
 rebound to the newly created bundle through `bundleId`.

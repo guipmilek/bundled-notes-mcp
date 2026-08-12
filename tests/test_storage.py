@@ -6,6 +6,7 @@ from types import SimpleNamespace
 import httpx
 import pytest
 
+from bundled_notes_mcp.errors import BundledNotesError
 from bundled_notes_mcp.storage import FirebaseStorage
 
 
@@ -55,3 +56,19 @@ async def test_multipart_upload_uses_firebase_protocol_and_preserves_raw_bytes(t
     }
     assert uploaded_bytes == payload + f"\r\n--{boundary}--\r\n".encode()
     assert result["size"] == str(len(payload))
+
+
+@pytest.mark.asyncio
+async def test_download_is_authenticated_and_bounded() -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        assert request.headers["Authorization"] == "Bearer test"
+        assert request.url.params["alt"] == "media"
+        return httpx.Response(200, content=b"hello", headers={"content-type": "text/plain"})
+
+    async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as http:
+        storage = FirebaseStorage(FakeAuth(), http)  # type: ignore[arg-type]
+        payload, content_type = await storage.download("users/u/a", max_bytes=5)
+        assert payload == b"hello"
+        assert content_type == "text/plain"
+        with pytest.raises(BundledNotesError):
+            await storage.download("users/u/a", max_bytes=4)

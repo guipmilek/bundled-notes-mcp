@@ -12,7 +12,7 @@ import httpx
 
 from .auth import FirebaseAuth
 from .errors import BundledNotesError
-from .models import MAX_FILE_BYTES
+from .models import MAX_FILE_BYTES, MAX_MCP_DOWNLOAD_BYTES
 
 
 class FirebaseStorage:
@@ -53,6 +53,40 @@ class FirebaseStorage:
         if response.status_code == 404 and missing_ok:
             return None
         return _response(response)
+
+    async def download(self, object_name: str, *, max_bytes: int = MAX_MCP_DOWNLOAD_BYTES) -> tuple[bytes, str]:
+        if max_bytes < 1 or max_bytes > MAX_MCP_DOWNLOAD_BYTES:
+            raise BundledNotesError("invalid_download_limit", "max_bytes must be between 1 and 10 MiB.")
+        async with self.http.stream(
+            "GET",
+            self.object_url(object_name),
+            params={"alt": "media"},
+            headers=await self.auth.headers(),
+        ) as response:
+            if response.status_code >= 400:
+                await response.aread()
+                _response(response)
+            length = response.headers.get("content-length")
+            if length:
+                try:
+                    if int(length) > max_bytes:
+                        raise BundledNotesError(
+                            "attachment_too_large_to_download",
+                            "The attachment exceeds the MCP download limit; use the Bundled Notes app.",
+                        )
+                except ValueError:
+                    pass
+            chunks: list[bytes] = []
+            size = 0
+            async for chunk in response.aiter_bytes():
+                size += len(chunk)
+                if size > max_bytes:
+                    raise BundledNotesError(
+                        "attachment_too_large_to_download",
+                        "The attachment exceeds the MCP download limit; use the Bundled Notes app.",
+                    )
+                chunks.append(chunk)
+            return b"".join(chunks), response.headers.get("content-type", "application/octet-stream")
 
     async def delete(self, object_name: str) -> None:
         response = await self.http.delete(self.object_url(object_name), headers=await self.auth.headers())

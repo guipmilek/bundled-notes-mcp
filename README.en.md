@@ -30,6 +30,8 @@ data model used by the web app.
   named and recursively remove known Firestore subcollections when required.
 - Updates use Firestore update masks so unknown upstream fields are preserved.
 - Authentication, purchase, and download tokens are never returned by MCP tools.
+- Authenticated downloads return Base64 only up to 10 MiB and never expose signed
+  Firebase Storage URLs or tokens.
 - Entry moves create and verify the destination before deleting the source, with
   compensating cleanup if source deletion fails.
 - Tag deletion refuses dangling entry/Kanban references by default.
@@ -89,12 +91,15 @@ without confirmation, inspect the IDs and payload, and repeat with `confirm=true
 | --- | --- |
 | Account | Authenticated status and safe user projection |
 | Compatibility | Sanitized schema audit and additive/breaking drift detection |
-| Bundles | List, get, create, update, archive, restore, and delete |
-| Entries | List, search, create, update, duplicate, move, complete, and delete |
-| Tags/tasks | Create, update, apply, remove, swap, and execute actions |
+| Backup | Export an account or one bundle as structured JSON |
+| Bundles | List, get, create, update, reorder, archive, restore, and delete |
+| Entries | List, search, create, update, reorder, duplicate, move, complete, and delete |
+| Tags/tasks | Manage local/global tags, subscriptions, priority, and actions |
 | Kanban | Configure ordered tag columns and move entries to a column/backlog |
 | Templates | Create from bundle, apply, and delete |
-| Files & Photos | List, upload, attach, detach, and delete |
+| Files & Photos | List, download up to 10 MiB, upload, attach, detach, and delete |
+| Rich links | Generate or refresh previews through the native callable function |
+| Reminders | List reminder metadata attached to entries |
 
 Search filters downloaded entries client-side because the web app also relies on
 a local cache/index instead of a Firestore full-text endpoint.
@@ -118,8 +123,10 @@ and [testing](docs/testing.md).
 
 - Firebase endpoints and Firestore paths are implementation details, not a
   compatibility promise.
-- Google Keep import, JSON export, reminders, and derived rich-link-preview
-  generation are observed but are not mutation tools in `0.1.0`.
+- Reminder writes remain blocked until the Android scheduling/notification
+  contract can be validated end-to-end; a Firestore write alone is not treated as
+  functional reminder support.
+- Google Keep import remains out of scope while the official flow is still under development.
 - Detach account files from relevant entries before deleting them.
 - User-document counters may lag; collection-listing tools are authoritative for
   this server.

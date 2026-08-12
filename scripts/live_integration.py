@@ -28,8 +28,13 @@ MUTATING_TOOLS = {
     "bundled_move_kanban_entry",
     "bundled_remove_attachment",
     "bundled_remove_tag",
+    "bundled_reorder_bundles",
+    "bundled_reorder_entries",
+    "bundled_reorder_tags",
+    "bundled_refresh_link_previews",
     "bundled_set_bundle_archived",
     "bundled_set_entry_state",
+    "bundled_set_global_tag_subscription",
     "bundled_update_bundle",
     "bundled_update_entry",
     "bundled_update_tag",
@@ -117,6 +122,17 @@ async def run(run_id: str) -> dict[str, Any]:
                 {"bundle_id": source["id"], "spec": {"name": f"{prefix} Global", "global_tag": True}, "confirm": True},
             )
             global_tags.append((source["id"], global_tag["id"]))
+            globals_list = await call("bundled_list_global_tags")
+            assert any(item["id"] == global_tag["id"] for item in globals_list["tags"])
+            prioritized = await call(
+                "bundled_reorder_tags",
+                {
+                    "bundle_id": source["id"],
+                    "tag_ids": [global_tag["id"], task["id"]],
+                    "confirm": True,
+                },
+            )
+            assert prioritized["tagPriorityOrder"] == [global_tag["id"], task["id"]]
             checks.append("local_and_global_tags")
 
             entry = await call(
@@ -207,6 +223,16 @@ async def run(run_id: str) -> dict[str, Any]:
                 {"spec": {"name": f"{prefix} Board", "template": "list"}, "confirm": True},
             )
             bundle_ids.append(board["id"])
+            subscribed = await call(
+                "bundled_set_global_tag_subscription",
+                {
+                    "bundle_id": board["id"],
+                    "tag_id": global_tag["id"],
+                    "subscribed": True,
+                    "confirm": True,
+                },
+            )
+            assert global_tag["id"] in subscribed["subscribedGlobalTagIds"]
             column_tags = []
             for name, color in (("To Do", "#4a4ddf"), ("Doing", "#e9860c"), ("Done", "#0ce986")):
                 column_tags.append(
@@ -255,6 +281,11 @@ async def run(run_id: str) -> dict[str, Any]:
                 },
             )
             assert copied["id"] != moved["id"]
+            reordered_entries = await call(
+                "bundled_reorder_entries",
+                {"bundle_id": board["id"], "entry_ids": [copied["id"], moved["id"]], "confirm": True},
+            )
+            assert [item["id"] for item in reordered_entries["entries"]] == [copied["id"], moved["id"]]
             await call(
                 "bundled_delete_entry",
                 {"bundle_id": board["id"], "entry_id": copied["id"], "confirm": True},
@@ -275,6 +306,18 @@ async def run(run_id: str) -> dict[str, Any]:
             applied_tags = await call("bundled_list_tags", {"bundle_id": applied["id"], "include_global": False})
             assert applied_tags["count"] == 3
             assert all(tag["bundleId"] == applied["id"] for tag in applied_tags["tags"])
+            reordered_bundles = await call(
+                "bundled_reorder_bundles",
+                {"bundle_ids": [applied["id"], board["id"], source["id"]], "confirm": True},
+            )
+            assert [item["id"] for item in reordered_bundles["bundles"]] == [
+                applied["id"],
+                board["id"],
+                source["id"],
+            ]
+            exported = await call("bundled_export_data", {"bundle_id": board["id"]})
+            assert exported["export_version"] == 1 and len(exported["bundles"]) == 1
+            await call("bundled_list_reminders", {"limit": 300})
             checks.append("template_create_apply")
 
             payload = b"0123456789012345678901234567890123456789012345678"
@@ -296,6 +339,23 @@ async def run(run_id: str) -> dict[str, Any]:
             catalog = await call("bundled_list_attachments")
             catalog_item = next(item for item in catalog["attachments"] if item["id"] == attachment_id)
             assert catalog_item["text"] == filename and catalog_item["fileSize"] == len(payload)
+            downloaded = await call(
+                "bundled_download_attachment", {"attachment_id": attachment_id, "max_bytes": len(payload)}
+            )
+            assert base64.b64decode(downloaded["content_base64"]) == payload
+            await call(
+                "bundled_update_entry",
+                {
+                    "bundle_id": board["id"],
+                    "entry_id": moved["id"],
+                    "spec": {"content": "https://example.com"},
+                    "confirm": True,
+                },
+            )
+            await call(
+                "bundled_refresh_link_previews",
+                {"bundle_id": board["id"], "entry_id": moved["id"], "confirm": True},
+            )
             schema = await call("bundled_schema_status", {"sample_size": 25})
             assert schema["compatible"] is True, json.dumps(schema, sort_keys=True)
             checks.append("sanitized_schema_contract")
